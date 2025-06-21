@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Chat, GenerateContentResponse, Part } from '@google/genai';
+import { GoogleGenAI, Chat } from '@google/genai';
 
 const API_KEY = process.env.API_KEY;
 
@@ -48,8 +48,7 @@ export class GeminiService {
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      const userMessagePart: Part = { text: message };
-      const stream = await chat.sendMessageStream({ contents: { parts: [userMessagePart] }});
+      const stream = await chat.sendMessageStream({ message: message });
       
       for await (const chunk of stream) {
         // Check for safety ratings or blocks if necessary
@@ -57,7 +56,9 @@ export class GeminiService {
         //   onChunk("No puedo responder a esa consulta debido a las directrices de seguridad. ");
         //   break; 
         // }
-        onChunk(chunk.text);
+        if (chunk.text) {
+          onChunk(chunk.text);
+        }
       }
       onComplete();
     } catch (error) {
