@@ -1,0 +1,6 @@
+{
+  "name": "Chatbot de Música Spotify",
+  "description": "Un chatbot para discutir música, obtener recomendaciones y explorar artistas, impulsado por Gemini. ¡Pregunta sobre canciones, artistas, géneros o pide ideas para listas de reproducción!",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
