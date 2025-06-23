@@ -62,9 +62,7 @@ npm install
 # Copiar archivo de ejemplo
 cp .env.example .env
 
-# Editar .env con la URL de tu BFF
-VITE_BFF_URL=https://api.tu-bff.com/v1
-VITE_API_URL=http://localhost:3001/api
+
 ```
 
 ### 3. Ejecutar la aplicación

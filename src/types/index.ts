@@ -26,6 +26,14 @@ export interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: ChatMessageContent[];
+}
+
 export interface IconProps {
   size?: number;
   className?: string;

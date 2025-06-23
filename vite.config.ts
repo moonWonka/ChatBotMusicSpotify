@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
     return {
       plugins: [react()],
       define: {
-        'process.env.VITE_BFF_URL': JSON.stringify(env.VITE_BFF_URL || 'https://api.tu-bff.com/v1')
+        'process.env.VITE_BFF_URL': JSON.stringify(env.VITE_BFF_URL || 'https://bffchatbotspotify-b3f8f4cqgaathwc7.chilecentral-01.azurewebsites.net/')
       },
       resolve: {
         alias: {

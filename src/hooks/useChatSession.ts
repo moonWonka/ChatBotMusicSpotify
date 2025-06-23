@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChatMessageContent, MessageSender } from '../types';
+import { ChatMessageContent, MessageSender, ChatSession } from '../types';
 import { bffChatService } from '../services/chatService';
+import { historyService } from '../services/historyService';
 
 export const useChatSession = () => {
   const [messages, setMessages] = useState<ChatMessageContent[]>([]);
@@ -17,9 +18,7 @@ export const useChatSession = () => {
   const initChat = useCallback(async () => {
     try {
       setIsLoading(true);
-      setError(null);
-
-      // Nueva sesión siempre (sin persistencia)
+      setError(null);      // Nueva sesión (el BFF manejará la persistencia automáticamente)
       const newSessionId = generateSessionId();
       setCurrentSessionId(newSessionId);
       setSessionTitle('Nueva Conversación');
@@ -55,17 +54,47 @@ export const useChatSession = () => {
     
     // Trunca a 50 caracteres
     return cleaned.substring(0, 47) + '...';
-  };
-
-  // Función simplificada sin persistencia
+  };  // Función para guardar sesión en el BFF (automática al enviar mensajes)
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
-    // Solo mantenemos en memoria durante la sesión
-    console.log('Sesión actual en memoria:', {
-      id: currentSessionId,
-      title: sessionTitle,
-      messageCount: sessionMessages.length
-    });
+    if (!currentSessionId || sessionMessages.length === 0) return;
+    
+    try {
+      // El BFF ya persiste automáticamente las conversaciones cuando enviamos mensajes
+      // Aquí solo registramos que la sesión está siendo manejada
+      console.log('Sesión manejada por BFF:', {
+        id: currentSessionId,
+        title: sessionTitle,
+        messageCount: sessionMessages.length
+      });
+    } catch (error) {
+      console.error('Error en saveCurrentSession:', error);
+    }
   }, [currentSessionId, sessionTitle]);
+
+  /**
+   * Cargar una conversación existente desde el historial
+   */
+  const loadConversation = useCallback(async (sessionId: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await historyService.getConversation(sessionId);
+      
+      if (response.success && response.data) {
+        const conversation = response.data;
+        setCurrentSessionId(conversation.id);
+        setSessionTitle(conversation.title);
+        setMessages(conversation.messages);
+      } else {
+        setError(response.error || 'Error al cargar la conversación');
+      }
+    } catch (err) {
+      setError('Error de conexión al cargar la conversación');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleSendMessage = async (inputText: string) => {
     if (!inputText.trim() || isLoading) return;
@@ -148,8 +177,7 @@ export const useChatSession = () => {
       initChat();
       hasInitialized.current = true;
     }
-  }, [initChat]);
-  return {
+  }, [initChat]);  return {
     messages,
     isLoading,
     error,
@@ -157,6 +185,7 @@ export const useChatSession = () => {
     sessionTitle,
     handleSendMessage,
     startNewChat,
+    loadConversation,
     clearError: () => setError(null),
   };
 };
