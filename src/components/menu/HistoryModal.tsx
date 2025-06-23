@@ -94,9 +94,9 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
     setLoading(true);
     try {
       const response = await historyService.searchConversations(searchQuery);
-      
-      if (response.success && response.data) {
-        // Convertir resultados de búsqueda a formato ConversationSummary        const searchResults: ConversationSummary[] = response.data.map(result => ({
+        if (response.success && response.data) {
+        // Convertir resultados de búsqueda a formato ConversationSummary
+        const searchResults: ConversationSummary[] = response.data.map(result => ({
           sessionId: result.sessionId,
           userPrompt: result.userPrompt || 'Sin título',
           timestamp: result.timestamp || new Date().toISOString(),

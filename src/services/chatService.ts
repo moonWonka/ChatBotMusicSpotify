@@ -18,8 +18,8 @@ export interface ConversationSummary {
 
 export interface SearchResult {
   sessionId: string;
-  title: string;
-  matchedMessages: ChatMessageContent[];
+  userPrompt: string;
+  timestamp: string;
 }
 
 /**
