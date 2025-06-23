@@ -7,7 +7,26 @@
   <title>Chatbot de Música Spotify</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* For custom scrollbar styling if desired, though Tailwind's default is usually fine */
+    /* Custom scrollbar styling */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #374151;
+      border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #6B7280;
+      border-radius: 3px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #9CA3AF;
+    }
+
+    /* Global scrollbar for the body */
     ::-webkit-scrollbar {
       width: 8px;
     }
@@ -23,6 +42,35 @@
     }
     body {
       overscroll-behavior-y: contain; /* Prevents pull-to-refresh on mobile if chat is scrollable */
+    }
+
+    /* Loading animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Message styling */
+    .message-user {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .message-ai {
+      background: #374151;
+      border-left: 4px solid #8b5cf6;
     }
   </style>
 <script type="importmap">
