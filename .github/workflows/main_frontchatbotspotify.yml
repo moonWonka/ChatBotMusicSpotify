@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: read
 
@@ -21,31 +21,28 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '~20'
+          node-version: '20.x'
 
       - name: Install dependencies and build
         run: |
           npm install
           npm run build
 
-      - name: Show dist folder contents and size
+      - name: Show build output
         run: |
-          echo "📂 Contenido de la carpeta dist/:"
+          echo "=== Build output ==="
+          ls -la
+          echo "=== Dist folder content ==="
           ls -la dist/
-          echo ""
-          echo "📊 Tamaño de la carpeta dist/:"
+          echo "=== Dist folder size ==="
           du -sh dist/
-          echo ""
-          echo "🔍 Archivos por tipo:"
-          find dist/ -name "*.html" | wc -l | xargs echo "HTML files:"
-          find dist/ -name "*.js" | wc -l | xargs echo "JavaScript files:"
-          find dist/ -name "*.css" | wc -l | xargs echo "CSS files:"
 
       - name: Upload dist folder only
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: dist/
+
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -63,27 +60,14 @@ jobs:
           name: frontend-build
           path: .
 
-      - name: Show downloaded files for deployment
+      - name: Show deployment files
         run: |
-          echo "📦 Archivos descargados para deployment:"
-          ls -la .
-          echo ""
-          echo "📊 Tamaño total de archivos a desplegar:"
+          echo "=== Files to deploy ==="
+          ls -la
+          echo "=== Total size ==="
           du -sh .
-          echo ""
-          echo "🔍 Contenido del index.html:"
-          if [ -f "index.html" ]; then
-            echo "✅ index.html encontrado"
-            head -10 index.html
-          else
-            echo "❌ index.html NO encontrado!"
-          fi
-          echo ""
-          echo "🔍 Archivos JavaScript:"
-          find . -name "*.js" | head -5
-          echo ""
-          echo "🔍 Archivos CSS:"
-          find . -name "*.css" | head -5
+          echo "=== All files recursively ==="
+          find . -type f -exec ls -lh {} \;
 
       - name: Login to Azure
         uses: azure/login@v2
