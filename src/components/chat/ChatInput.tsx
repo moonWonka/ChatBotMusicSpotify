@@ -1,18 +1,18 @@
-
 import React, { useState } from 'react';
+import { SendIcon } from '../shared/Icons';
+import Button from '../shared/Button';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  placeholder?: string;
 }
 
-const SendIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-  </svg>
-);
-
-const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ 
+  onSendMessage, 
+  isLoading, 
+  placeholder = "Pregunta sobre música..."
+}) => {
   const [inputText, setInputText] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,19 +29,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         type="text"
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        placeholder={isLoading ? "La IA está pensando..." : "Pregunta sobre música..."}
+        placeholder={isLoading ? "La IA está pensando..." : placeholder}
         className="flex-grow bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-shadow duration-150 disabled:opacity-50"
         disabled={isLoading}
         aria-label="Escribe tu mensaje aquí"
       />
-      <button
+      <Button
         type="submit"
         disabled={isLoading || !inputText.trim()}
-        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold p-3 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-12 h-12"
+        className="w-12 h-12 p-0"
         aria-label="Enviar mensaje"
       >
-        <SendIcon />
-      </button>
+        <SendIcon size={20} />
+      </Button>
     </form>
   );
 };

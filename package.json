@@ -1,15 +1,17 @@
 {
-  "name": "chatbot-de-música-spotify",
+  "name": "chatbot-de-musica-spotify",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "cd server && npm run dev",
+    "server:install": "cd server && npm install",
+    "start:full": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
-    "@google/genai": "^1.5.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -17,6 +19,11 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
