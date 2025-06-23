@@ -28,6 +28,23 @@ jobs:
           npm install
           npm run build
 
+      - name: Show dist folder contents and size
+        run: |
+          echo "📂 Contenido de la carpeta dist/:"
+          ls -la dist/
+          echo ""
+          echo "📊 Tamaño de la carpeta dist/:"
+          du -sh dist/
+          echo ""
+          echo "🔍 Estructura completa del directorio dist/:"
+          find dist/ -type f -exec ls -lh {} \; | head -20
+          echo ""
+          echo "📈 Resumen de archivos por tipo:"
+          find dist/ -name "*.html" | wc -l | xargs echo "HTML files:"
+          find dist/ -name "*.js" | wc -l | xargs echo "JavaScript files:"
+          find dist/ -name "*.css" | wc -l | xargs echo "CSS files:"
+          find dist/ -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" | wc -l | xargs echo "Image files:"
+
       - name: Upload dist folder only
         uses: actions/upload-artifact@v4
         with:
@@ -50,6 +67,17 @@ jobs:
         with:
           name: frontend-build
           path: .
+
+      - name: Show downloaded files for deployment
+        run: |
+          echo "📦 Archivos descargados para deployment:"
+          ls -la .
+          echo ""
+          echo "📊 Tamaño total de archivos a desplegar:"
+          du -sh .
+          echo ""
+          echo "🔍 Archivos principales:"
+          find . -name "*.html" -o -name "*.js" -o -name "*.css" | head -10
 
       - name: Login to Azure
         uses: azure/login@v2
