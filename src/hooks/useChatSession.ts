@@ -28,6 +28,7 @@ export const useChatSession = () => {
         sender: MessageSender.AI,
         text: "¡Hola! Soy Skynet AI, tu asistente musical de Spotify. ¿De qué humor estás hoy? ¡Pregúntame sobre artistas, canciones, géneros o ideas para listas de reproducción! 🎵",
         timestamp: Date.now(),
+        sessionId: newSessionId,
       };
       
       setMessages([initialMessage]);
@@ -83,7 +84,7 @@ export const useChatSession = () => {
       
       if (response.success && response.data) {
         const conversation = response.data;
-        setCurrentSessionId(conversation.id);
+        setCurrentSessionId(conversation.sessionId || conversation.id);
         setSessionTitle(conversation.title);
         setMessages(conversation.messages);
       } else {
@@ -104,6 +105,7 @@ export const useChatSession = () => {
       sender: MessageSender.USER,
       text: inputText,
       timestamp: Date.now(),
+      sessionId: currentSessionId || undefined,
     };
 
     const newMessages = [...messages, userMessage];
@@ -121,6 +123,7 @@ export const useChatSession = () => {
       sender: MessageSender.AI,
       text: '',
       timestamp: Date.now(),
+      sessionId: currentSessionId || undefined,
     };
     
     const messagesWithPlaceholder = [...newMessages, aiPlaceholderMessage];
@@ -135,11 +138,13 @@ export const useChatSession = () => {
             )
           );
         },
-        (fullResponse: string) => {
+        (fullResponse: string, returnedSessionId: string) => {
           setIsLoading(false);
-          // Guardar sesión después de completar la respuesta
+          setCurrentSessionId(returnedSessionId);
           const finalMessages = messagesWithPlaceholder.map(msg =>
-            msg.id === aiPlaceholderMessageId ? { ...msg, text: fullResponse } : msg
+            msg.id === aiPlaceholderMessageId
+              ? { ...msg, text: fullResponse, sessionId: returnedSessionId }
+              : msg
           );
           saveCurrentSession(finalMessages);
         },

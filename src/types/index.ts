@@ -8,6 +8,7 @@ export interface ChatMessageContent {
   sender: MessageSender;
   text: string;
   timestamp: number;
+  sessionId?: string;
 }
 
 export interface ApiResponse<T> {
@@ -28,6 +29,7 @@ export interface ButtonProps {
 
 export interface ChatSession {
   id: string;
+  sessionId?: string;
   title: string;
   createdAt: number;
   updatedAt: number;
