@@ -8,6 +8,7 @@ export interface ChatMessageContent {
   sender: MessageSender;
   text: string;
   timestamp: number;
+  sessionId?: string;
 }
 
 export interface ApiResponse<T> {
@@ -28,6 +29,7 @@ export interface ButtonProps {
 
 export interface ChatSession {
   id: string;
+  sessionId?: string;
   title: string;
   createdAt: number;
   updatedAt: number;
@@ -38,3 +40,40 @@ export interface IconProps {
   size?: number;
   className?: string;
 }
+
+export interface BaseResponse {
+  statusCode?: number;
+  description?: string | null;
+  userFriendly?: string | null;
+  moreInformation?: string | null;
+}
+
+export interface PostRegisterRequest {
+  userEmail: string;
+  password: string;
+  displayName?: string | null;
+}
+
+export interface PostRegisterResponse extends BaseResponse {}
+
+export interface GetUserInfoResponse extends BaseResponse {
+  id?: string | null;
+  userName?: string | null;
+  email?: string | null;
+  fullName?: string | null;
+  phoneNumber?: string | null;
+  role?: string | null;
+}
+
+export interface UpdateUserProfileRequest {
+  userId?: string | null;
+  displayName?: string | null;
+  email?: string | null;
+  age?: number | null;
+  bio?: string | null;
+  favoriteGenres?: string | null;
+  profilePictureUrl?: string | null;
+}
+
+export interface UpdateUserProfileResponse extends BaseResponse {}
+

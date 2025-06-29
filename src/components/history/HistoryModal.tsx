@@ -61,6 +61,27 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
     }
   };
 
+  const generateConversationTitle = (userPrompt: string, sessionId: string): string => {
+    if (!userPrompt || userPrompt.trim() === '') {
+      return `Conversación ${sessionId.slice(0, 8)}`;
+    }
+    
+    // Truncar el prompt del usuario para usar como título
+    const maxLength = 60;
+    if (userPrompt.length <= maxLength) {
+      return userPrompt;
+    }
+    
+    const truncated = userPrompt.substring(0, maxLength);
+    const lastSpaceIndex = truncated.lastIndexOf(' ');
+    
+    if (lastSpaceIndex > maxLength * 0.8) {
+      return truncated.substring(0, lastSpaceIndex) + '...';
+    }
+    
+    return truncated + '...';
+  };
+
   const handleDeleteConversation = async (sessionId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
@@ -88,7 +109,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
   };
 
   const filteredConversations = conversations.filter(conv =>
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    conv.userPrompt.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (!isOpen) return null;
@@ -195,14 +216,14 @@ const HistoryModal: React.FC<HistoryModalProps> = ({
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h4 className="text-white font-medium mb-1 truncate">
-                          {conversation.title}
+                          {generateConversationTitle(conversation.userPrompt, conversation.sessionId)}
                         </h4>
                         <div className="flex items-center gap-4 text-sm text-gray-400">
                           <span>
-                            {historyService.formatDate(conversation.updatedAt)}
+                            {historyService.formatDate(new Date(conversation.timestamp).getTime())}
                           </span>
                           <span>
-                            {conversation.messageCount} mensajes
+                            Sesión: {conversation.sessionId.slice(0, 8)}...
                           </span>
                         </div>
                       </div>

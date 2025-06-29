@@ -1,5 +1,5 @@
-import { ApiResponse, ChatSession, ChatMessageContent } from '../types';
-import { BASE_API_URL } from '../config/config';
+import { ApiResponse, ChatSession } from '../types';
+import { BASE_API_URL, DEFAULT_API_VERSION } from '../config/config';
 
 export interface ChatResponse {
   response: string;
@@ -33,6 +33,7 @@ class BFFChatService {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'api-version': DEFAULT_API_VERSION,
         },
       });
 
@@ -65,6 +66,7 @@ class BFFChatService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'api-version': DEFAULT_API_VERSION,
         },
         body: JSON.stringify(body),
       });
@@ -93,11 +95,14 @@ class BFFChatService {
 
   private async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     try {
+      const headers = {
+        'Accept': 'application/json',
+        'api-version': DEFAULT_API_VERSION,
+      };
+
       const response = await fetch(`${BASE_API_URL}${endpoint}`, {
         method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: headers,
       });
 
       const data = await response.json();
@@ -119,7 +124,8 @@ class BFFChatService {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
       };
-    }  }
+    }
+  }
 
   async sendMessage(message: string, sessionId?: string): Promise<ApiResponse<ChatResponse>> {
     return this.post<ChatResponse>('api/Chat/conversation', {
@@ -161,8 +167,9 @@ class BFFChatService {
   /**
    * Eliminar una conversación específica
    */
-  async deleteConversation(sessionId: string): Promise<ApiResponse<boolean>> {
-    return this.delete<boolean>(`api/Chat/conversation/${sessionId}`);
+  async deleteConversation(sessionId: string): Promise<ApiResponse<{statusCode: number, message: string, error: string}>> {
+    debugger
+    return this.delete<{statusCode: number, message: string, error: string}>(`api/Chat/conversation/${sessionId}`);
   }
 
   /**
@@ -184,7 +191,7 @@ class BFFChatService {
     message: string,
     sessionId: string | undefined,
     onChunk: (chunkText: string) => void,
-    onComplete: (fullResponse: string) => void,
+    onComplete: (fullResponse: string, sessionId: string) => void,
     onError: (error: Error) => void
   ): Promise<void> {
     try {
@@ -195,6 +202,7 @@ class BFFChatService {
       }
 
       const fullResponse = response.data.response;
+      const newSessionId = response.data.sessionId;
       
       // Simular streaming dividiendo la respuesta en chunks
       const words = fullResponse.split(' ');
@@ -208,7 +216,7 @@ class BFFChatService {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       
-      onComplete(fullResponse);
+      onComplete(fullResponse, newSessionId);
     } catch (error) {
       console.error('Error in sendMessageStream:', error);
       onError(error instanceof Error ? error : new Error('Unknown error occurred'));
