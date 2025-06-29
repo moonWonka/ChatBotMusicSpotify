@@ -58,15 +58,13 @@ export const useChatSession = () => {
   };  // Función para guardar sesión en el BFF (automática al enviar mensajes)
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
     if (!currentSessionId || sessionMessages.length === 0) return;
-    
     try {
-      // El BFF ya persiste automáticamente las conversaciones cuando enviamos mensajes
-      // Aquí solo registramos que la sesión está siendo manejada
-      console.log('Sesión manejada por BFF:', {
-        id: currentSessionId,
-        title: sessionTitle,
-        messageCount: sessionMessages.length
-      });
+      // Guardar la conversación llamando al endpoint real
+      const lastUserMessage = sessionMessages.filter(m => m.sender === MessageSender.USER).pop();
+      if (lastUserMessage) {
+        await bffChatService.sendMessage(lastUserMessage.text, currentSessionId);
+      }
+      // Puedes agregar aquí lógica adicional si necesitas manejar la respuesta
     } catch (error) {
       console.error('Error en saveCurrentSession:', error);
     }

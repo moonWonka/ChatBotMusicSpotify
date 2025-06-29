@@ -2,8 +2,28 @@ import { ApiResponse, ChatSession } from '../types';
 import { BASE_API_URL, DEFAULT_API_VERSION } from '../config/config';
 
 export interface ChatResponse {
-  response: string;
-  sessionId: string;
+  statusCode: number;
+  message: string;
+  error: string;
+  isSuccess: boolean;
+  originalQuestion: string;
+  contextualizedQuestion: string;
+  isContextualized: boolean;
+  validationStatus: string;
+  clarificationMessage: string;
+  generatedSQL: string | null;
+  databaseResults: string | null;
+  naturalResponse: string | null;
+  aiModelUsed: string;
+  processingTimeMs: number;
+  steps: {
+    contextualizationTimeMs: number;
+    validationTimeMs: number;
+    sqlGenerationTimeMs: number;
+    sqlExecutionTimeMs: number;
+    naturalResponseTimeMs: number;
+  };
+  sessionId?: string;
 }
 
 export interface ConversationsResponse {
@@ -186,7 +206,9 @@ class BFFChatService {
     return this.get<SearchResult[]>(`api/Chat/search?q=${encodeURIComponent(query)}`);
   }
 
-  // Método para simular streaming (puedes implementar Server-Sent Events más tarde)
+  /**
+   * Streaming real (sin simulación)
+   */
   async sendMessageStream(
     message: string,
     sessionId: string | undefined,
@@ -195,27 +217,31 @@ class BFFChatService {
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      const response = await this.sendMessage(message, sessionId);
-      
+      // Llama al endpoint real
+      const response = await this.post<ChatResponse>('api/AI/process-question', {
+        sessionId: sessionId || null,
+        question: message,
+        sModel: 'default',
+        includeContext: true,
+        contextLimit: 20
+      });
+
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to get response from chat service');
       }
 
-      const fullResponse = response.data.response;
-      const newSessionId = response.data.sessionId;
-      
-      // Simular streaming dividiendo la respuesta en chunks
-      const words = fullResponse.split(' ');
-      let accumulatedText = '';
-      
-      for (let i = 0; i < words.length; i++) {
-        accumulatedText += (i > 0 ? ' ' : '') + words[i];
-        onChunk(accumulatedText);
-        
-        // Simular delay entre chunks
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      
+      const responseData = response.data;
+      // Prioridad: naturalResponse > clarificationMessage > message > contextualizedQuestion
+      let fullResponse = responseData.naturalResponse
+        || responseData.clarificationMessage
+        || responseData.message
+        || responseData.contextualizedQuestion
+        || 'No se pudo obtener respuesta.';
+
+      const newSessionId = responseData.sessionId || sessionId || '';
+
+      // No hay simulación: se entrega la respuesta completa de una vez
+      onChunk(fullResponse);
       onComplete(fullResponse, newSessionId);
     } catch (error) {
       console.error('Error in sendMessageStream:', error);
