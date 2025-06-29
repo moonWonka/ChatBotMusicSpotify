@@ -60,39 +60,39 @@ const App: React.FC = () => {
       {/* Main Chat Area */}
       <div className="flex flex-col flex-grow">
         {/* Header */}
-        <header className="bg-purple-700 p-4 shadow-md flex items-center gap-3 z-10">
-          {/* Menu Button */}          <MainMenu
-            onStartNewChat={handleStartNewChat}
-            onShowHistory={handleShowHistory}
-            isConversationActive={hasActiveConversation}
-          />
-            <div className="flex-grow">
-            <h1 className="text-xl font-bold text-center">
+        <header className="bg-purple-700 p-4 shadow-md flex flex-col gap-2 z-10">
+          <div className="flex items-center gap-3">
+            {/* Menu Button */}
+            <MainMenu
+              onStartNewChat={handleStartNewChat}
+              onShowHistory={handleShowHistory}
+              isConversationActive={hasActiveConversation}
+            />
+            <h1 className="flex-grow text-xl font-bold text-center truncate">
               {sessionTitle}
             </h1>
-            <p className="text-sm text-purple-200 text-center">
-              Chatbot de Música Spotify
-            </p>
-            {hasActiveConversation && (
-              <div className="text-center mt-1">
-                <button
-                  onClick={handleShowConversationInfo}
-                  className="text-xs text-purple-300 hover:text-purple-100 underline"
-                >
-                  📊 Ver info de conversación
-                </button>
-              </div>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={startNewChat}
+              className="ml-auto"
+            >
+              Nueva Conversación
+            </Button>
           </div>
-          
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={startNewChat}
-            className="ml-auto"
-          >
-            Nueva Conversación
-          </Button>
+          <p className="text-sm text-purple-200 text-center">
+            Chatbot de Música Spotify
+          </p>
+          {hasActiveConversation && (
+            <div className="text-center">
+              <button
+                onClick={handleShowConversationInfo}
+                className="text-xs text-purple-300 hover:text-purple-100 underline"
+              >
+                📊 Ver info de conversación
+              </button>
+            </div>
+          )}
         </header>        {/* Error Message */}
         {error && (
           <ErrorMessage 
