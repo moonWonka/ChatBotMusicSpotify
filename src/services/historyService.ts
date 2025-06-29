@@ -42,7 +42,7 @@ class HistoryService {
   /**
    * Eliminar una conversación
    */
-  async deleteConversation(sessionId: string): Promise<ApiResponse<boolean>> {
+  async deleteConversation(sessionId: string): Promise<ApiResponse<{statusCode: number, message: string, error: string}>> {
     try {
       const response = await bffChatService.deleteConversation(sessionId);
       return response;
@@ -110,26 +110,37 @@ class HistoryService {
    * Formatear fecha para mostrar en la UI
    */
   formatDate(timestamp: number | string): string {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    try {
+      const date = new Date(timestamp);
+      
+      // Verificar que la fecha es válida
+      if (isNaN(date.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-    if (diffInDays === 0) {
-      return date.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } else if (diffInDays === 1) {
-      return 'Ayer';
-    } else if (diffInDays < 7) {
-      return `Hace ${diffInDays} días`;
-    } else {
-      return date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit'
-      });
+      if (diffInDays === 0) {
+        return date.toLocaleTimeString('es-ES', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+      } else if (diffInDays === 1) {
+        return 'Ayer';
+      } else if (diffInDays < 7) {
+        return `Hace ${diffInDays} días`;
+      } else {
+        return date.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Fecha inválida';
     }
   }
 
@@ -144,7 +155,7 @@ class HistoryService {
     try {
       const response = await this.getAllConversations();
       
-      if (!response.success || !response.data) {
+      if (!response.success || !response.data || !Array.isArray(response.data)) {
         return {
           totalConversations: 0,
           totalMessages: 0,
@@ -154,11 +165,31 @@ class HistoryService {
 
       const conversations = response.data;
       const totalConversations = conversations.length;
-      const totalMessages = conversations.reduce((sum, conv) => sum + conv.messageCount, 0);
       
-      const lastActivity = conversations.length > 0
-        ? this.formatDate(Math.max(...conversations.map(c => new Date(c.updatedAt).getTime())))
-        : null;
+      // Cada conversación representa al menos un intercambio (mensaje del usuario + respuesta)
+      const totalMessages = totalConversations * 2; // Estimación: usuario + AI por cada conversación
+      
+      let lastActivity: string | null = null;
+      
+      if (conversations.length > 0) {
+        try {
+          // Filtrar timestamps válidos y convertir a números
+          const validTimestamps = conversations
+            .map(c => {
+              const date = new Date(c.timestamp);
+              return isNaN(date.getTime()) ? null : date.getTime();
+            })
+            .filter((timestamp): timestamp is number => timestamp !== null);
+          
+          if (validTimestamps.length > 0) {
+            const mostRecentTimestamp = Math.max(...validTimestamps);
+            lastActivity = this.formatDate(mostRecentTimestamp);
+          }
+        } catch (error) {
+          console.error('Error calculating last activity:', error);
+          lastActivity = 'N/A';
+        }
+      }
 
       return {
         totalConversations,

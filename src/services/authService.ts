@@ -1,15 +1,18 @@
 import { ApiResponse, PostRegisterRequest, PostRegisterResponse } from '../types';
-import { BASE_API_URL } from '../config/config';
+import { BASE_API_URL, DEFAULT_API_VERSION } from '../config/config';
 
 class AuthService {
   private async post<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'api-version': DEFAULT_API_VERSION,
+      };
+
       const response = await fetch(`${BASE_API_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: headers,
         body: JSON.stringify(body),
       });
 
