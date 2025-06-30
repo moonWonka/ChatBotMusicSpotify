@@ -9,7 +9,7 @@ import WelcomeScreen from './components/shared/WelcomeScreen';
 import MainMenu from './components/menu/MainMenu';
 import NewChatModal from './components/menu/NewChatModal';
 import ConversationInfo from './components/menu/ConversationInfo';
-import HistoryModal from './components/menu/HistoryModal';
+import ConversationHistoryModal from './components/history/ConversationHistoryModal';
 import TestButton from './components/shared/TestButton';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -27,6 +27,7 @@ const App: React.FC = () => {
     sessionTitle,
     handleSendMessage,
     startNewChat,
+    loadConversation,
     clearError,
   } = useChatSession();
 
@@ -42,11 +43,14 @@ const App: React.FC = () => {
     setShowHistoryModal(true);
   };
 
-  const handleLoadConversation = (sessionId: string) => {
-    // TODO: Implementar loadConversation en el hook useChatSession
-    console.log('Loading conversation:', sessionId);
-    alert(`Cargando conversación: ${sessionId}\n\nEsta funcionalidad se implementará cuando el hook soporte cargar conversaciones.`);
-    setShowHistoryModal(false);  };
+  const handleLoadConversation = async (sessionId: string) => {
+    try {
+      await loadConversation(sessionId);
+      setShowHistoryModal(false);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    }
+  };
 
   const handleNewChatWithModel = (model: string) => {
     setSelectedModel(model);
@@ -158,7 +162,7 @@ const App: React.FC = () => {
             onClose={() => setShowConversationInfo(false)}
           />
         )}        {/* History Modal */}
-        <HistoryModal
+        <ConversationHistoryModal
           isOpen={showHistoryModal}
           onClose={() => setShowHistoryModal(false)}
           onLoadConversation={handleLoadConversation}
