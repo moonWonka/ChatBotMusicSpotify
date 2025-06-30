@@ -6,9 +6,9 @@ interface UseAuthReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName?: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, displayName?: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -27,11 +27,20 @@ export const useAuth = (): UseAuthReturn => {
       setIsLoading(false); // Auth check completado
     });
 
+    // Verificar resultado de redirect al inicializar
+    firebaseAuthService.handleRedirectResult().then((result) => {
+      if (result.success && result.user) {
+        console.log('✅ Usuario autenticado via redirect:', result.user.email);
+      } else if (result.error) {
+        setError(result.error);
+      }
+    });
+
     // Cleanup function
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -39,18 +48,21 @@ export const useAuth = (): UseAuthReturn => {
       const response = await firebaseAuthService.loginWithEmail(email, password);
 
       if (!response.success) {
-        throw new Error(response.error || 'Error en el login');
+        setError(response.error || 'Error en el login');
+        setIsLoading(false);
+        return false;
       }
       // El usuario se actualizará automáticamente via onAuthStateChange
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       setIsLoading(false);
-      throw err;
+      return false;
     }
   };
 
-  const register = async (email: string, password: string, displayName?: string): Promise<void> => {
+  const register = async (email: string, password: string, displayName?: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -58,18 +70,21 @@ export const useAuth = (): UseAuthReturn => {
       const response = await firebaseAuthService.registerWithEmail(email, password, displayName);
 
       if (!response.success) {
-        throw new Error(response.error || 'Error en el registro');
+        setError(response.error || 'Error en el registro');
+        setIsLoading(false);
+        return false;
       }
       // El usuario se actualizará automáticamente via onAuthStateChange
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       setIsLoading(false);
-      throw err;
+      return false;
     }
   };
 
-  const loginWithGoogle = async (): Promise<void> => {
+  const loginWithGoogle = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -77,14 +92,17 @@ export const useAuth = (): UseAuthReturn => {
       const response = await firebaseAuthService.loginWithGoogle();
 
       if (!response.success) {
-        throw new Error(response.error || 'Error en el login con Google');
+        setError(response.error || 'Error en el login con Google');
+        setIsLoading(false);
+        return false;
       }
       // El usuario se actualizará automáticamente via onAuthStateChange
+      return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       setIsLoading(false);
-      throw err;
+      return false;
     }
   };
 

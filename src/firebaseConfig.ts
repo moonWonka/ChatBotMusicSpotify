@@ -7,6 +7,7 @@ const getEnvVar = (name: string): string => {
   const value = import.meta.env[name];
   if (!value) {
     console.error(`Variable de entorno ${name} no está definida`);
+    console.error('Variables disponibles:', Object.keys(import.meta.env));
     throw new Error(`Variable de entorno ${name} es requerida`);
   }
   return value;
