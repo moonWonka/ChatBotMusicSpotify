@@ -1,37 +1,34 @@
 import { useState, useEffect } from 'react';
-import authService, { PostLoginRequest } from '../services/authService';
-
-interface User {
-  id: string;
-  email: string;
-  displayName?: string;
-}
+import firebaseAuthService, { AuthUser } from '../services/firebaseAuthService';
 
 interface UseAuthReturn {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, displayName?: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
 }
 
 export const useAuth = (): UseAuthReturn => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Iniciar en true para auth check
   const [error, setError] = useState<string | null>(null);
 
   const isAuthenticated = !!user;
 
   useEffect(() => {
-    const token = authService.getAuthToken();
-    const userData = authService.getUserData();
-    
-    if (token && userData) {
-      setUser(userData);
-    }
+    // Configurar listener para cambios en el estado de autenticación
+    const unsubscribe = firebaseAuthService.onAuthStateChange((authUser) => {
+      setUser(authUser);
+      setIsLoading(false); // Auth check completado
+    });
+
+    // Cleanup function
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
@@ -39,32 +36,36 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const payload: PostLoginRequest = {
-        userEmail: email,
-        password: password,
-      };
+      const response = await firebaseAuthService.loginWithEmail(email, password);
 
-      const response = await authService.login(payload);
-
-      if (response.success && response.data) {
-        const { token, user: userData } = response.data;
-        
-        if (token && userData) {
-          authService.setAuthToken(token);
-          authService.setUserData(userData);
-          setUser(userData);
-        } else {
-          throw new Error('Respuesta de login inválida');
-        }
-      } else {
+      if (!response.success) {
         throw new Error(response.error || 'Error en el login');
       }
+      // El usuario se actualizará automáticamente via onAuthStateChange
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
-      throw err;
-    } finally {
       setIsLoading(false);
+      throw err;
+    }
+  };
+
+  const register = async (email: string, password: string, displayName?: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await firebaseAuthService.registerWithEmail(email, password, displayName);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error en el registro');
+      }
+      // El usuario se actualizará automáticamente via onAuthStateChange
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMessage);
+      setIsLoading(false);
+      throw err;
     }
   };
 
@@ -73,34 +74,30 @@ export const useAuth = (): UseAuthReturn => {
     setError(null);
 
     try {
-      const response = await authService.loginWithGoogle();
+      const response = await firebaseAuthService.loginWithGoogle();
 
-      if (response.success && response.data) {
-        const { token, user: userData } = response.data;
-        
-        if (token && userData) {
-          authService.setAuthToken(token);
-          authService.setUserData(userData);
-          setUser(userData);
-        } else {
-          throw new Error('Respuesta de Google login inválida');
-        }
-      } else {
+      if (!response.success) {
         throw new Error(response.error || 'Error en el login con Google');
       }
+      // El usuario se actualizará automáticamente via onAuthStateChange
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
-      throw err;
-    } finally {
       setIsLoading(false);
+      throw err;
     }
   };
 
-  const logout = (): void => {
-    authService.logout();
-    setUser(null);
+  const logout = async (): Promise<void> => {
     setError(null);
+    try {
+      await firebaseAuthService.logout();
+      // El usuario se actualizará automáticamente via onAuthStateChange
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cerrar sesión';
+      setError(errorMessage);
+      throw err;
+    }
   };
 
   const clearError = (): void => {
@@ -113,6 +110,7 @@ export const useAuth = (): UseAuthReturn => {
     isLoading,
     error,
     login,
+    register,
     loginWithGoogle,
     logout,
     clearError,
