@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChatMessageContent } from '../../types';
 import ChatMessageItem from './ChatMessageItem';
 import LoadingSpinner from '../shared/LoadingSpinner';
+import MusicDetailsModal from './MusicDetailsModal';
 
 interface ChatHistoryProps {
   messages: ChatMessageContent[];
@@ -10,12 +11,24 @@ interface ChatHistoryProps {
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading = false }) => {
   const chatHistoryRef = useRef<HTMLDivElement>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessageContent | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleShowDetails = (message: ChatMessageContent) => {
+    setSelectedMessage(message);
+    setShowDetailsModal(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetailsModal(false);
+    setSelectedMessage(null);
+  };
 
   return (
     <div 
@@ -31,7 +44,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading = false }
         </div>
       ) : (
         messages.map((msg) => (
-          <ChatMessageItem key={msg.id} message={msg} />
+          <ChatMessageItem 
+            key={msg.id} 
+            message={msg} 
+            onShowDetails={handleShowDetails}
+          />
         ))
       )}
       
@@ -41,6 +58,13 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading = false }
           <span className="ml-2 text-sm text-gray-400">Skynet AI está pensando...</span>
         </div>
       )}
+
+      {/* Music Details Modal */}
+      <MusicDetailsModal
+        isOpen={showDetailsModal}
+        message={selectedMessage}
+        onClose={handleCloseDetails}
+      />
     </div>
   );
 };
