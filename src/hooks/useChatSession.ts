@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChatMessageContent, MessageSender, ChatSession } from '../types';
+import { ChatMessageContent, MessageSender } from '../types';
 import { bffChatService } from '../services/chatService';
 import { historyService } from '../services/historyService';
-import { useConversationStorage } from './useConversationStorage';
 import { useAuth } from './useAuth';
 
 export const useChatSession = () => {
@@ -14,9 +13,6 @@ export const useChatSession = () => {
   const [sessionTitle, setSessionTitle] = useState<string>('Nueva Conversación');
   
   const hasInitialized = useRef<boolean>(false);
-  
-  // Integration with local storage
-  const { saveConversation, loadConversation: loadStoredConversation } = useConversationStorage();
 
   const generateSessionId = (): string => {
     return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
@@ -61,58 +57,29 @@ export const useChatSession = () => {
     
     // Trunca a 50 caracteres
     return cleaned.substring(0, 47) + '...';
-  };  // Función para guardar sesión en local storage
+  };  // Función para guardar sesión - Solo en backend con Firebase UID
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
     if (!currentSessionId || sessionMessages.length === 0 || !user?.id) return;
     
     try {
-      // Save to local storage
-      const chatSession: ChatSession = {
-        id: currentSessionId,
-        sessionId: currentSessionId,
-        title: sessionTitle,
-        createdAt: sessionMessages[0]?.timestamp || Date.now(),
-        updatedAt: Date.now(),
-        messages: sessionMessages
-      };
-      
-      await saveConversation(chatSession);
-      console.log('💾 Conversación guardada localmente:', sessionTitle);
-      
-      // Also save to BFF for backup/sync (optional)
-      const lastUserMessage = sessionMessages.filter(m => m.sender === MessageSender.USER).pop();
-      if (lastUserMessage) {
-        try {
-          await bffChatService.sendMessage(lastUserMessage.text, currentSessionId);
-        } catch (bffError) {
-          console.warn('Error saving to BFF (local save successful):', bffError);
-        }
-      }
+      // El guardado se hace automáticamente en sendMessageStream con Firebase UID
+      console.log('💾 Conversación guardada en backend con Firebase UID:', user.id);
+      console.log('📝 Título de sesión:', sessionTitle);
+      console.log('📊 Total de mensajes:', sessionMessages.length);
     } catch (error) {
       console.error('Error en saveCurrentSession:', error);
     }
-  }, [currentSessionId, user?.id, saveConversation]);
+  }, [currentSessionId, sessionTitle, user?.id]);
 
   /**
-   * Cargar una conversación existente desde el almacenamiento local
+   * Cargar una conversación existente desde el backend
    */
   const loadConversation = useCallback(async (sessionId: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Try to load from local storage first
-      const localConversation = await loadStoredConversation(sessionId);
-      
-      if (localConversation) {
-        setCurrentSessionId(localConversation.sessionId || localConversation.id);
-        setSessionTitle(localConversation.title);
-        setMessages(localConversation.messages);
-        console.log('📂 Conversación cargada desde almacenamiento local:', localConversation.title);
-        return;
-      }
-
-      // Fallback to BFF if not found locally
+      // Cargar directamente desde el backend
       const response = await historyService.getConversation(sessionId);
       
       if (response.success && response.data) {
@@ -120,10 +87,7 @@ export const useChatSession = () => {
         setCurrentSessionId(conversation.sessionId || conversation.id);
         setSessionTitle(conversation.title);
         setMessages(conversation.messages);
-        
-        // Save to local storage for future use
-        await saveConversation(conversation);
-        console.log('📂 Conversación cargada desde BFF y guardada localmente:', conversation.title);
+        console.log('📂 Conversación cargada desde backend:', conversation.title);
       } else {
         setError(response.error || 'Error al cargar la conversación');
       }
@@ -133,7 +97,7 @@ export const useChatSession = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [loadStoredConversation, saveConversation]);
+  }, []);
 
   const handleSendMessage = async (inputText: string) => {
     if (!inputText.trim() || isLoading || !user?.id) {
