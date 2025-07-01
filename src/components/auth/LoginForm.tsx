@@ -6,6 +6,7 @@ import ErrorMessage from '../shared/ErrorMessage';
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<void>;
   onGoogleLogin: () => Promise<void>;
+  onSwitchToRegister?: () => void;
   isLoading?: boolean;
   error?: string;
   onClearError?: () => void;
@@ -14,6 +15,7 @@ interface LoginFormProps {
 const LoginForm: React.FC<LoginFormProps> = ({
   onLogin,
   onGoogleLogin,
+  onSwitchToRegister,
   isLoading = false,
   error,
   onClearError,
@@ -208,7 +210,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           <p className="text-gray-400 text-sm">
             ¿No tienes cuenta?{' '}
             <button 
-              onClick={() => window.location.href = '/register'}
+              onClick={onSwitchToRegister}
               className="text-purple-400 hover:text-purple-300 font-medium focus:outline-none"
             >
               Regístrate aquí
