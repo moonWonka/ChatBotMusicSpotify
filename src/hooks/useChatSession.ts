@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChatMessageContent, MessageSender, ChatSession } from '../types';
+import { ChatMessageContent, MessageSender } from '../types';
 import { bffChatService } from '../services/chatService';
 import { historyService } from '../services/historyService';
 import { useAuth } from './useAuth';
@@ -57,26 +57,29 @@ export const useChatSession = () => {
     
     // Trunca a 50 caracteres
     return cleaned.substring(0, 47) + '...';
-  };  // Función para guardar sesión en el BFF (automática al enviar mensajes)
+  };  // Función para guardar sesión - Solo en backend con Firebase UID
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
     if (!currentSessionId || sessionMessages.length === 0 || !user?.id) return;
+    
     try {
-      // El guardado ya se hace automáticamente en sendMessageStream
-      // Esta función puede ser usada para guardar metadata adicional si es necesario
-      console.log('Session saved automatically with Firebase UID:', user.id);
+      // El guardado se hace automáticamente en sendMessageStream con Firebase UID
+      console.log('💾 Conversación guardada en backend con Firebase UID:', user.id);
+      console.log('📝 Título de sesión:', sessionTitle);
+      console.log('📊 Total de mensajes:', sessionMessages.length);
     } catch (error) {
       console.error('Error en saveCurrentSession:', error);
     }
-  }, [currentSessionId, user?.id]);
+  }, [currentSessionId, sessionTitle, user?.id]);
 
   /**
-   * Cargar una conversación existente desde el historial
+   * Cargar una conversación existente desde el backend
    */
   const loadConversation = useCallback(async (sessionId: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
+      // Cargar directamente desde el backend
       const response = await historyService.getConversation(sessionId);
       
       if (response.success && response.data) {
@@ -84,10 +87,12 @@ export const useChatSession = () => {
         setCurrentSessionId(conversation.sessionId || conversation.id);
         setSessionTitle(conversation.title);
         setMessages(conversation.messages);
+        console.log('📂 Conversación cargada desde backend:', conversation.title);
       } else {
         setError(response.error || 'Error al cargar la conversación');
       }
     } catch (err) {
+      console.error('Error loading conversation:', err);
       setError('Error de conexión al cargar la conversación');
     } finally {
       setIsLoading(false);
