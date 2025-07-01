@@ -9,16 +9,16 @@ interface ChatInputProps {
 }
 
 const MUSIC_SUGGESTIONS = [
-  "¿Cuáles son las mejores canciones de rock de los 80?",
-  "Recomiéndame música similar a The Beatles",
-  "¿Qué géneros musicales están de moda?",
-  "Busca canciones relajantes para estudiar",
-  "¿Cuál es la discografía completa de Queen?",
-  "Recomiéndame playlist para hacer ejercicio",
-  "¿Qué artistas son similares a Billie Eilish?",
-  "Busca música latina actual",
-  "¿Cuáles son los mejores álbumes de jazz?",
-  "Recomiéndame música para dormir"
+  "¿Cuáles son las canciones más populares?",
+  "Muéstrame las 10 canciones con mayor popularidad",
+  "¿Qué canciones tienen alta energía?",
+  "¿Cuáles son todos los artistas disponibles?",
+  "Canciones con alta bailabilidad",
+  "¿Cuáles son las canciones más largas?",
+  "¿Qué canciones son más acústicas?",
+  "Muéstrame las canciones más recientes",
+  "Canciones populares con alta energía",
+  "¿Qué canciones duran más de 5 minutos?"
 ];
 
 const ChatInput: React.FC<ChatInputProps> = ({ 
@@ -45,7 +45,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, []);
 
   useEffect(() => {
-    if (inputText.length > 0) {
+    if (inputText.length > 0) 
+      {
       const filtered = MUSIC_SUGGESTIONS.filter(suggestion =>
         suggestion.toLowerCase().includes(inputText.toLowerCase())
       );
