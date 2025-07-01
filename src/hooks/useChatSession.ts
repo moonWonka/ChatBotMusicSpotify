@@ -2,8 +2,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChatMessageContent, MessageSender, ChatSession } from '../types';
 import { bffChatService } from '../services/chatService';
 import { historyService } from '../services/historyService';
+import { useAuth } from './useAuth';
 
 export const useChatSession = () => {
+  const { user } = useAuth(); // Obtener el usuario autenticado
   const [messages, setMessages] = useState<ChatMessageContent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,18 +59,15 @@ export const useChatSession = () => {
     return cleaned.substring(0, 47) + '...';
   };  // Función para guardar sesión en el BFF (automática al enviar mensajes)
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
-    if (!currentSessionId || sessionMessages.length === 0) return;
+    if (!currentSessionId || sessionMessages.length === 0 || !user?.id) return;
     try {
-      // Guardar la conversación llamando al endpoint real
-      const lastUserMessage = sessionMessages.filter(m => m.sender === MessageSender.USER).pop();
-      if (lastUserMessage) {
-        await bffChatService.sendMessage(lastUserMessage.text, currentSessionId);
-      }
-      // Puedes agregar aquí lógica adicional si necesitas manejar la respuesta
+      // El guardado ya se hace automáticamente en sendMessageStream
+      // Esta función puede ser usada para guardar metadata adicional si es necesario
+      console.log('Session saved automatically with Firebase UID:', user.id);
     } catch (error) {
       console.error('Error en saveCurrentSession:', error);
     }
-  }, [currentSessionId, sessionTitle]);
+  }, [currentSessionId, user?.id]);
 
   /**
    * Cargar una conversación existente desde el historial
@@ -96,7 +95,12 @@ export const useChatSession = () => {
   }, []);
 
   const handleSendMessage = async (inputText: string) => {
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading || !user?.id) {
+      if (!user?.id) {
+        setError('Error: Usuario no autenticado');
+      }
+      return;
+    }
 
     const userMessage: ChatMessageContent = {
       id: Date.now().toString() + '-user',
@@ -128,6 +132,7 @@ export const useChatSession = () => {
     setMessages(messagesWithPlaceholder);    try {
       await bffChatService.sendMessageStream(
         inputText,
+        user.id, // Firebase UID
         currentSessionId || undefined,
         (chunkText: string) => {
           setMessages(prevMessages =>
