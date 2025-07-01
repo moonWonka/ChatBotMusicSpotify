@@ -2,6 +2,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -31,6 +33,17 @@ class FirebaseAuthService {
     this.googleProvider = new GoogleAuthProvider();
     this.googleProvider.addScope('email');
     this.googleProvider.addScope('profile');
+  }
+
+  private isMobileDevice(): boolean {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('🔍 Device detection:', {
+      userAgent: navigator.userAgent,
+      isMobile: isMobile,
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height
+    });
+    return isMobile;
   }
 
   private formatUser(user: User): AuthUser {
@@ -104,12 +117,40 @@ class FirebaseAuthService {
 
   async loginWithGoogle(): Promise<AuthResponse> {
     try {
-      const userCredential: UserCredential = await signInWithPopup(auth, this.googleProvider);
-      return {
-        success: true,
-        user: this.formatUser(userCredential.user),
-      };
+      const isMobile = this.isMobileDevice();
+      console.log('🔐 Google login method:', isMobile ? 'redirect' : 'popup');
+      
+      if (isMobile) {
+        await signInWithRedirect(auth, this.googleProvider);
+        return { success: true };
+      } else {
+        const userCredential: UserCredential = await signInWithPopup(auth, this.googleProvider);
+        return {
+          success: true,
+          user: this.formatUser(userCredential.user),
+        };
+      }
     } catch (error) {
+      return {
+        success: false,
+        error: this.handleAuthError(error),
+      };
+    }
+  }
+
+  async handleRedirectResult(): Promise<AuthResponse> {
+    try {
+      const result = await getRedirectResult(auth);
+      if (result) {
+        console.log('✅ Redirect result received:', result.user.email);
+        return {
+          success: true,
+          user: this.formatUser(result.user),
+        };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Redirect result error:', error);
       return {
         success: false,
         error: this.handleAuthError(error),
