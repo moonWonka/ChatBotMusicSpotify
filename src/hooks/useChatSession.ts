@@ -3,8 +3,10 @@ import { ChatMessageContent, MessageSender, ChatSession } from '../types';
 import { bffChatService } from '../services/chatService';
 import { historyService } from '../services/historyService';
 import { useConversationStorage } from './useConversationStorage';
+import { useAuth } from './useAuth';
 
 export const useChatSession = () => {
+  const { user } = useAuth(); // Obtener el usuario autenticado
   const [messages, setMessages] = useState<ChatMessageContent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export const useChatSession = () => {
     return cleaned.substring(0, 47) + '...';
   };  // Función para guardar sesión en local storage
   const saveCurrentSession = useCallback(async (sessionMessages: ChatMessageContent[]) => {
-    if (!currentSessionId || sessionMessages.length === 0) return;
+    if (!currentSessionId || sessionMessages.length === 0 || !user?.id) return;
     
     try {
       // Save to local storage
@@ -89,7 +91,7 @@ export const useChatSession = () => {
     } catch (error) {
       console.error('Error en saveCurrentSession:', error);
     }
-  }, [currentSessionId, sessionTitle, saveConversation]);
+  }, [currentSessionId, user?.id, saveConversation]);
 
   /**
    * Cargar una conversación existente desde el almacenamiento local
@@ -134,7 +136,12 @@ export const useChatSession = () => {
   }, [loadStoredConversation, saveConversation]);
 
   const handleSendMessage = async (inputText: string) => {
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading || !user?.id) {
+      if (!user?.id) {
+        setError('Error: Usuario no autenticado');
+      }
+      return;
+    }
 
     const userMessage: ChatMessageContent = {
       id: Date.now().toString() + '-user',
@@ -166,6 +173,7 @@ export const useChatSession = () => {
     setMessages(messagesWithPlaceholder);    try {
       await bffChatService.sendMessageStream(
         inputText,
+        user.id, // Firebase UID
         currentSessionId || undefined,
         (chunkText: string) => {
           setMessages(prevMessages =>

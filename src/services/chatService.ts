@@ -147,9 +147,11 @@ class BFFChatService {
     }
   }
 
-  async sendMessage(message: string, sessionId?: string): Promise<ApiResponse<ChatResponse>> {
+  async sendMessage(message: string, firebaseUserId: string, sessionId?: string): Promise<ApiResponse<ChatResponse>> {
     return this.post<ChatResponse>('api/Chat/conversation', {
       userPrompt: message,
+      isResponse: "string",
+      firebaseUserId: firebaseUserId,
       sessionId,
     });
   }
@@ -211,20 +213,15 @@ class BFFChatService {
    */
   async sendMessageStream(
     message: string,
+    firebaseUserId: string,
     sessionId: string | undefined,
     onChunk: (chunkText: string) => void,
     onComplete: (fullResponse: string, sessionId: string) => void,
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      // Llama al endpoint real
-      const response = await this.post<ChatResponse>('api/AI/process-question', {
-        sessionId: sessionId || null,
-        question: message,
-        sModel: 'default',
-        includeContext: true,
-        contextLimit: 20
-      });
+      // Llama al endpoint correcto para guardar la conversación con Firebase UID
+      const response = await this.sendMessage(message, firebaseUserId, sessionId);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to get response from chat service');

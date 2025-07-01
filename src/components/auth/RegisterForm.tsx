@@ -3,27 +3,35 @@ import Button from '../shared/Button';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import ErrorMessage from '../shared/ErrorMessage';
 
-interface LoginFormProps {
-  onLogin: (email: string, password: string) => Promise<void>;
+interface RegisterFormProps {
+  onRegister: (email: string, password: string, displayName: string) => Promise<void>;
   onGoogleLogin: () => Promise<void>;
-  onSwitchToRegister?: () => void;
   isLoading?: boolean;
   error?: string;
   onClearError?: () => void;
+  onSwitchToLogin?: () => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({
-  onLogin,
+const RegisterForm: React.FC<RegisterFormProps> = ({
+  onRegister,
   onGoogleLogin,
-  onSwitchToRegister,
   isLoading = false,
   error,
   onClearError,
+  onSwitchToLogin,
 }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [formData, setFormData] = useState({
+    displayName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [formErrors, setFormErrors] = useState({
+    displayName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,29 +39,62 @@ const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   const validateForm = (): boolean => {
+    const errors = {
+      displayName: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    };
     let isValid = true;
     
-    if (!email.trim()) {
-      setEmailError('El email es requerido');
+    if (!formData.displayName.trim()) {
+      errors.displayName = 'El nombre es requerido';
       isValid = false;
-    } else if (!validateEmail(email)) {
-      setEmailError('Formato de email inválido');
+    } else if (formData.displayName.length < 2) {
+      errors.displayName = 'El nombre debe tener al menos 2 caracteres';
       isValid = false;
-    } else {
-      setEmailError('');
     }
 
-    if (!password.trim()) {
-      setPasswordError('La contraseña es requerida');
+    if (!formData.email.trim()) {
+      errors.email = 'El email es requerido';
       isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres');
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Formato de email inválido';
       isValid = false;
-    } else {
-      setPasswordError('');
     }
 
+    if (!formData.password.trim()) {
+      errors.password = 'La contraseña es requerida';
+      isValid = false;
+    } else if (formData.password.length < 6) {
+      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+      isValid = false;
+    }
+
+    if (!formData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Confirma tu contraseña';
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Las contraseñas no coinciden';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
     return isValid;
+  };
+
+  const handleInputChange = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+    
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,7 +108,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       onClearError();
     }
 
-    await onLogin(email, password);
+    await onRegister(formData.email, formData.password, formData.displayName);
   };
 
   const handleGoogleLogin = async () => {
@@ -85,8 +126,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
           <div className="bg-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🎵</span>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Iniciar Sesión</h2>
-          <p className="text-gray-400">Accede a tu Chatbot de Música Spotify</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Crear Cuenta</h2>
+          <p className="text-gray-400">Únete a Chatbot de Música Spotify</p>
         </div>
 
         {/* Error Message */}
@@ -100,8 +141,31 @@ const LoginForm: React.FC<LoginFormProps> = ({
           </div>
         )}
 
-        {/* Login Form */}
+        {/* Register Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Display Name Field */}
+          <div>
+            <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
+              Nombre Completo
+            </label>
+            <input
+              id="displayName"
+              type="text"
+              value={formData.displayName}
+              onChange={handleInputChange('displayName')}
+              className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
+                formErrors.displayName 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-gray-600 focus:ring-purple-500 focus:border-purple-500'
+              }`}
+              placeholder="Tu nombre completo"
+              disabled={isLoading}
+            />
+            {formErrors.displayName && (
+              <p className="mt-1 text-sm text-red-400">{formErrors.displayName}</p>
+            )}
+          </div>
+
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
@@ -110,18 +174,18 @@ const LoginForm: React.FC<LoginFormProps> = ({
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange('email')}
               className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
-                emailError 
+                formErrors.email 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-600 focus:ring-purple-500 focus:border-purple-500'
               }`}
               placeholder="tu@email.com"
               disabled={isLoading}
             />
-            {emailError && (
-              <p className="mt-1 text-sm text-red-400">{emailError}</p>
+            {formErrors.email && (
+              <p className="mt-1 text-sm text-red-400">{formErrors.email}</p>
             )}
           </div>
 
@@ -133,22 +197,45 @@ const LoginForm: React.FC<LoginFormProps> = ({
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange('password')}
               className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
-                passwordError 
+                formErrors.password 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-600 focus:ring-purple-500 focus:border-purple-500'
               }`}
               placeholder="••••••••"
               disabled={isLoading}
             />
-            {passwordError && (
-              <p className="mt-1 text-sm text-red-400">{passwordError}</p>
+            {formErrors.password && (
+              <p className="mt-1 text-sm text-red-400">{formErrors.password}</p>
             )}
           </div>
 
-          {/* Login Button */}
+          {/* Confirm Password Field */}
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+              Confirmar Contraseña
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange('confirmPassword')}
+              className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-colors ${
+                formErrors.confirmPassword 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-gray-600 focus:ring-purple-500 focus:border-purple-500'
+              }`}
+              placeholder="••••••••"
+              disabled={isLoading}
+            />
+            {formErrors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-400">{formErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          {/* Register Button */}
           <Button
             type="submit"
             variant="primary"
@@ -159,10 +246,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
             {isLoading ? (
               <div className="flex items-center justify-center">
                 <LoadingSpinner />
-                <span className="ml-2">Iniciando sesión...</span>
+                <span className="ml-2">Creando cuenta...</span>
               </div>
             ) : (
-              'Iniciar Sesión'
+              'Crear Cuenta'
             )}
           </Button>
         </form>
@@ -174,7 +261,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           <div className="flex-1 border-t border-gray-600"></div>
         </div>
 
-        {/* Google Login Button */}
+        {/* Google Register Button */}
         <Button
           variant="ghost"
           size="lg"
@@ -208,12 +295,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
         {/* Footer Links */}
         <div className="mt-6 text-center">
           <p className="text-gray-400 text-sm">
-            ¿No tienes cuenta?{' '}
+            ¿Ya tienes cuenta?{' '}
             <button 
-              onClick={onSwitchToRegister}
+              onClick={onSwitchToLogin}
               className="text-purple-400 hover:text-purple-300 font-medium focus:outline-none"
             >
-              Regístrate aquí
+              Inicia sesión
             </button>
           </p>
         </div>
@@ -222,4 +309,4 @@ const LoginForm: React.FC<LoginFormProps> = ({
   );
 };
 
-export default LoginForm;
+export default RegisterForm;
