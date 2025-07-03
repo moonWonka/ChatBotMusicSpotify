@@ -13,12 +13,14 @@ interface MenuOption {
 interface MainMenuProps {
   onStartNewChat: () => void;
   onShowHistory: () => void;
+  onShowSettings?: () => void;
   isConversationActive: boolean;
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({
   onStartNewChat,
   onShowHistory,
+  onShowSettings,
   isConversationActive
 }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -42,7 +44,17 @@ const MainMenu: React.FC<MainMenuProps> = ({
         onShowHistory();
         setShowMenu(false);
       }
-    }
+    },
+    ...(onShowSettings ? [{
+      id: 'settings',
+      title: '⚙️ Configuración',
+      description: 'Personaliza tu experiencia',
+      icon: <span>⚙️</span>,
+      action: () => {
+        onShowSettings();
+        setShowMenu(false);
+      }
+    }] : [])
   ];
 
   return (

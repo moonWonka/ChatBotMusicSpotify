@@ -10,6 +10,7 @@ import MainMenu from './components/menu/MainMenu';
 import NewChatModal from './components/menu/NewChatModal';
 import ConversationInfo from './components/menu/ConversationInfo';
 import ConversationHistoryModal from './components/history/ConversationHistoryModal';
+import SettingsModal from './components/settings/SettingsModal';
 import TestButton from './components/shared/TestButton';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showConversationInfo, setShowConversationInfo] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('gemini');
   
   const { logout, user } = useAuth();
@@ -29,7 +31,7 @@ const App: React.FC = () => {
     startNewChat,
     loadConversation,
     clearError,
-  } = useChatSession();
+  } = useChatSession(selectedModel);
 
   const isTyping = isLoading && messages.length > 0 && 
     messages[messages.length - 1].sender === 'ai' && 
@@ -41,6 +43,10 @@ const App: React.FC = () => {
     setShowNewChatModal(true);
   };  const handleShowHistory = () => {
     setShowHistoryModal(true);
+  };
+
+  const handleShowSettings = () => {
+    setShowSettingsModal(true);
   };
 
   const handleLoadConversation = async (sessionId: string) => {
@@ -74,6 +80,7 @@ const App: React.FC = () => {
             {/* Menu Button */}            <MainMenu
               onStartNewChat={handleStartNewChat}
               onShowHistory={handleShowHistory}
+              onShowSettings={handleShowSettings}
               isConversationActive={hasActiveConversation}
             />
               <div className="flex-grow">
@@ -166,6 +173,12 @@ const App: React.FC = () => {
           isOpen={showHistoryModal}
           onClose={() => setShowHistoryModal(false)}
           onLoadConversation={handleLoadConversation}
+        />
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
         />
       </div>
     </ProtectedRoute>
