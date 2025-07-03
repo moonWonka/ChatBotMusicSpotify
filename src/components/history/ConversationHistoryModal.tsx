@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { bffChatService, ConversationSummary } from '../../services/chatService';
+import { useAuth } from '../../hooks/useAuth';
 import Button from '../shared/Button';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import ErrorMessage from '../shared/ErrorMessage';
@@ -15,6 +16,7 @@ const ConversationHistoryModal: React.FC<ConversationHistoryModalProps> = ({
   onClose,
   onLoadConversation
 }) => {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,10 +24,15 @@ const ConversationHistoryModal: React.FC<ConversationHistoryModalProps> = ({
 
   // Cargar conversaciones desde el backend
   const loadConversations = async () => {
+    if (!user?.id) {
+      setError('Usuario no autenticado');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      const response = await bffChatService.getConversations();
+      const response = await bffChatService.getConversations(user.id);
       if (response.success && response.data) {
         setConversations(response.data);
       } else {
@@ -40,10 +47,10 @@ const ConversationHistoryModal: React.FC<ConversationHistoryModalProps> = ({
 
   // Cargar conversaciones cuando se abre el modal
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user?.id) {
       loadConversations();
     }
-  }, [isOpen]);
+  }, [isOpen, user?.id]);
 
   // Filtrar conversaciones por búsqueda
   const filteredConversations = conversations.filter(conv =>

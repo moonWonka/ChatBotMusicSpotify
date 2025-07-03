@@ -237,8 +237,8 @@ class BFFChatService {
   /**
    * Obtener todas las conversaciones del usuario
    */
-  async getConversations(): Promise<ApiResponse<ConversationSummary[]>> {
-    const response = await this.get<ConversationsResponse>('api/Chat/conversations');
+  async getConversations(firebaseUserId: string): Promise<ApiResponse<ConversationSummary[]>> {
+    const response = await this.get<ConversationsResponse>(`api/Chat/conversations/${encodeURIComponent(firebaseUserId)}`);
     
     if (response.success && response.data) {
       return {

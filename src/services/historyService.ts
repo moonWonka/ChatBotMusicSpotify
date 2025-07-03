@@ -10,9 +10,9 @@ class HistoryService {
   /**
    * Obtener todas las conversaciones
    */
-  async getAllConversations(): Promise<ApiResponse<ConversationSummary[]>> {
+  async getAllConversations(firebaseUserId: string): Promise<ApiResponse<ConversationSummary[]>> {
     try {
-      const response = await bffChatService.getConversations();
+      const response = await bffChatService.getConversations(firebaseUserId);
       return response;
     } catch (error) {
       console.error('Error getting conversations:', error);
@@ -88,72 +88,15 @@ class HistoryService {
   }
 
   /**
-   * Generar título para una conversación basado en el primer mensaje
+   * Obtener estadísticas del historial de conversaciones
    */
-  generateConversationTitle(firstMessage: string): string {
-    const maxLength = 50;
-    if (firstMessage.length <= maxLength) {
-      return firstMessage;
-    }
-    
-    const truncated = firstMessage.substring(0, maxLength);
-    const lastSpaceIndex = truncated.lastIndexOf(' ');
-    
-    if (lastSpaceIndex > maxLength * 0.7) {
-      return truncated.substring(0, lastSpaceIndex) + '...';
-    }
-    
-    return truncated + '...';
-  }
-
-  /**
-   * Formatear fecha para mostrar en la UI
-   */
-  formatDate(timestamp: number | string): string {
-    try {
-      const date = new Date(timestamp);
-      
-      // Verificar que la fecha es válida
-      if (isNaN(date.getTime())) {
-        return 'Fecha inválida';
-      }
-      
-      const now = new Date();
-      const diffInMs = now.getTime() - date.getTime();
-      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-      if (diffInDays === 0) {
-        return date.toLocaleTimeString('es-ES', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-      } else if (diffInDays === 1) {
-        return 'Ayer';
-      } else if (diffInDays < 7) {
-        return `Hace ${diffInDays} días`;
-      } else {
-        return date.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: '2-digit',
-          year: '2-digit'
-        });
-      }
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Fecha inválida';
-    }
-  }
-
-  /**
-   * Obtener estadísticas del historial
-   */
-  async getHistoryStats(): Promise<{
+  async getHistoryStats(firebaseUserId: string): Promise<{
     totalConversations: number;
     totalMessages: number;
     lastActivity: string | null;
   }> {
     try {
-      const response = await this.getAllConversations();
+      const response = await this.getAllConversations(firebaseUserId);
       
       if (!response.success || !response.data || !Array.isArray(response.data)) {
         return {
@@ -169,26 +112,14 @@ class HistoryService {
       // Cada conversación representa al menos un intercambio (mensaje del usuario + respuesta)
       const totalMessages = totalConversations * 2; // Estimación: usuario + AI por cada conversación
       
+      // Encontrar la actividad más reciente
       let lastActivity: string | null = null;
-      
       if (conversations.length > 0) {
-        try {
-          // Filtrar timestamps válidos y convertir a números
-          const validTimestamps = conversations
-            .map(c => {
-              const date = new Date(c.timestamp);
-              return isNaN(date.getTime()) ? null : date.getTime();
-            })
-            .filter((timestamp): timestamp is number => timestamp !== null);
-          
-          if (validTimestamps.length > 0) {
-            const mostRecentTimestamp = Math.max(...validTimestamps);
-            lastActivity = this.formatDate(mostRecentTimestamp);
-          }
-        } catch (error) {
-          console.error('Error calculating last activity:', error);
-          lastActivity = 'N/A';
-        }
+        // Ordenar por timestamp más reciente
+        const sortedConversations = conversations.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        lastActivity = sortedConversations[0].timestamp;
       }
 
       return {
@@ -205,6 +136,134 @@ class HistoryService {
       };
     }
   }
+
+  /**
+   * Obtener conversaciones recientes
+   */
+  async getRecentConversations(firebaseUserId: string, limit: number = 10): Promise<ApiResponse<ConversationSummary[]>> {
+    try {
+      const response = await this.getAllConversations(firebaseUserId);
+      
+      if (!response.success || !response.data) {
+        return response;
+      }
+
+      // Ordenar por timestamp más reciente y limitar
+      const recentConversations = response.data
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit);
+
+      return {
+        success: true,
+        data: recentConversations,
+      };
+    } catch (error) {
+      console.error('Error getting recent conversations:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Exportar historial de conversaciones
+   */
+  async exportConversations(firebaseUserId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await this.getAllConversations(firebaseUserId);
+      
+      if (!response.success || !response.data) {
+        return {
+          success: false,
+          error: response.error || 'No se pudieron obtener las conversaciones',
+        };
+      }
+
+      // Obtener detalles completos de cada conversación
+      const detailedConversations = [];
+      for (const summary of response.data) {
+        try {
+          const conversationResponse = await this.getConversation(summary.sessionId);
+          if (conversationResponse.success && conversationResponse.data) {
+            detailedConversations.push({
+              sessionId: summary.sessionId,
+              timestamp: summary.timestamp,
+              userPrompt: summary.userPrompt,
+              fullConversation: conversationResponse.data,
+            });
+          }
+        } catch (error) {
+          console.warn(`Error getting details for conversation ${summary.sessionId}:`, error);
+          // Incluir al menos el resumen
+          detailedConversations.push({
+            sessionId: summary.sessionId,
+            timestamp: summary.timestamp,
+            userPrompt: summary.userPrompt,
+            fullConversation: null,
+          });
+        }
+      }
+
+      return {
+        success: true,
+        data: detailedConversations,
+      };
+    } catch (error) {
+      console.error('Error exporting conversations:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Limpiar historial antiguo
+   */
+  async cleanupOldConversations(firebaseUserId: string, olderThanDays: number = 30): Promise<ApiResponse<number>> {
+    try {
+      const response = await this.getAllConversations(firebaseUserId);
+      
+      if (!response.success || !response.data) {
+        return {
+          success: false,
+          error: response.error || 'No se pudieron obtener las conversaciones',
+        };
+      }
+
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+      const conversationsToDelete = response.data.filter(conv => 
+        new Date(conv.timestamp) < cutoffDate
+      );
+
+      let deletedCount = 0;
+      for (const conversation of conversationsToDelete) {
+        try {
+          const deleteResponse = await this.deleteConversation(conversation.sessionId);
+          if (deleteResponse.success) {
+            deletedCount++;
+          }
+        } catch (error) {
+          console.warn(`Error deleting conversation ${conversation.sessionId}:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        data: deletedCount,
+      };
+    } catch (error) {
+      console.error('Error cleaning up old conversations:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
 
 export const historyService = new HistoryService();
+export default historyService;

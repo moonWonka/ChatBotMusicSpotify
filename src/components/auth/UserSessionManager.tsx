@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useConversationStorage } from '../../hooks/useConversationStorage';
+import { historyService } from '../../services/historyService';
 import Button from '../shared/Button';
 import LoadingSpinner from '../shared/LoadingSpinner';
 
@@ -19,7 +19,6 @@ interface SessionInfo {
 
 const UserSessionManager: React.FC<UserSessionManagerProps> = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
-  const { getStats, exportConversations, clearFilters } = useConversationStorage();
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeDevices, setActiveDevices] = useState<string[]>([]);
@@ -32,15 +31,20 @@ const UserSessionManager: React.FC<UserSessionManagerProps> = ({ isOpen, onClose
   }, [isOpen, user]);
 
   const loadSessionInfo = async () => {
+    if (!user?.id) {
+      console.error('No user ID available');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const stats = await getStats();
+      const stats = await historyService.getHistoryStats(user.id);
       setSessionInfo({
-        lastActivity: new Date(),
+        lastActivity: stats.lastActivity ? new Date(stats.lastActivity) : new Date(),
         conversationCount: stats.totalConversations,
         totalMessages: stats.totalMessages,
-        averageSessionLength: stats.averageMessagesPerConversation,
-        favoriteConversations: stats.starredConversations
+        averageSessionLength: stats.totalConversations > 0 ? Math.round(stats.totalMessages / stats.totalConversations) : 0,
+        favoriteConversations: 0 // Backend doesn't track favorites yet
       });
     } catch (error) {
       console.error('Error loading session info:', error);
@@ -60,10 +64,19 @@ const UserSessionManager: React.FC<UserSessionManagerProps> = ({ isOpen, onClose
   };
 
   const handleExportData = async () => {
+    if (!user?.id) {
+      console.error('No user ID available');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const data = await exportConversations();
+      const conversationsResponse = await historyService.getAllConversations(user.id);
       
+      if (!conversationsResponse.success) {
+        throw new Error(conversationsResponse.error || 'Error exporting conversations');
+      }
+
       // Create comprehensive export with user data
       const exportData = {
         user: {
@@ -73,7 +86,7 @@ const UserSessionManager: React.FC<UserSessionManagerProps> = ({ isOpen, onClose
           exportDate: new Date().toISOString()
         },
         sessionInfo,
-        conversations: JSON.parse(data),
+        conversations: conversationsResponse.data || [],
         metadata: {
           version: '1.0',
           platform: navigator.platform,
@@ -110,9 +123,6 @@ Esta acción NO se puede deshacer.`;
     if (window.confirm(confirmMessage)) {
       try {
         setIsLoading(true);
-        
-        // Clear all conversations for this user
-        clearFilters();
         
         // Clear localStorage for this app
         const keysToRemove = [];
