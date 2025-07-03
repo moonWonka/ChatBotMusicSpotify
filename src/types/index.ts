@@ -9,6 +9,7 @@ export interface ChatMessageContent {
   text: string;
   timestamp: number;
   sessionId?: string;
+  databaseResults?: any[];  // Resultados de la consulta a la base de datos
 }
 
 export interface ApiResponse<T> {

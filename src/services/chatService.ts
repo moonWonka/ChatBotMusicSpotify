@@ -291,7 +291,7 @@ class BFFChatService {
     aiModel: string,
     sessionId: string | undefined,
     onChunk: (chunkText: string) => void,
-    onComplete: (fullResponse: string, sessionId: string) => void,
+    onComplete: (fullResponse: string, sessionId: string, databaseResults?: any[]) => void,
     onError: (error: Error) => void
   ): Promise<void> {
     try {
@@ -323,6 +323,23 @@ class BFFChatService {
       console.log('🆔 Session ID para guardar:', newSessionId);
       console.log('💬 Respuesta AI procesada:', fullResponse.substring(0, 100) + '...');
 
+      // Extraer resultados de la base de datos si están disponibles
+      let databaseResults: any[] = [];
+      if (responseData.databaseResults) {
+        try {
+          // Si databaseResults es un string JSON, parsearlo
+          if (typeof responseData.databaseResults === 'string') {
+            databaseResults = JSON.parse(responseData.databaseResults);
+          } else if (Array.isArray(responseData.databaseResults)) {
+            databaseResults = responseData.databaseResults;
+          }
+          console.log('🗃️ Resultados de base de datos encontrados:', databaseResults.length, 'registros');
+        } catch (parseError) {
+          console.warn('⚠️ Error parseando resultados de base de datos:', parseError);
+          databaseResults = [];
+        }
+      }
+
       // Paso 2: Mostrar la respuesta al usuario primero
       onChunk(fullResponse);
 
@@ -347,8 +364,8 @@ class BFFChatService {
         // No interrumpimos el flujo, solo logueamos el error
       }
 
-      // Paso 4: Completar el flujo
-      onComplete(fullResponse, newSessionId);
+      // Paso 4: Completar el flujo con resultados de base de datos
+      onComplete(fullResponse, newSessionId, databaseResults);
     } catch (error) {
       console.error('🚨 Error in sendMessageStream:', error);
       onError(error instanceof Error ? error : new Error('Unknown error occurred'));
