@@ -28,6 +28,11 @@ const CATEGORY_COLORS: Record<ExcludedTerm['category'], string> = {
   custom: 'bg-gray-600'
 };
 
+/**
+ * Backend-only Excluded Terms Modal
+ * Displays and manages excluded terms directly from backend
+ * No local storage or sync dependencies
+ */
 const ExcludedTermsModal: React.FC<ExcludedTermsModalProps> = ({ isOpen, onClose }) => {
   const {
     terms,
@@ -54,18 +59,44 @@ const ExcludedTermsModal: React.FC<ExcludedTermsModalProps> = ({ isOpen, onClose
   const [importText, setImportText] = useState('');
   const [stats, setStats] = useState<any>(null);
 
+  // Load initial data when modal opens
   useEffect(() => {
     if (isOpen) {
+      console.log('🚀 Modal opened, loading initial data...');
+      const initializeModal = async () => {
+        try {
+          // Refresh terms from backend
+          console.log('🔄 Refreshing terms from backend...');
+          await refreshTerms();
+          
+          // Load statistics
+          console.log('📊 Loading statistics...');
+          await loadStats();
+        } catch (err) {
+          console.error('🚨 Error initializing modal:', err);
+        }
+      };
+      
+      initializeModal();
+    }
+  }, [isOpen, refreshTerms]);
+
+  // Update stats when terms change
+  useEffect(() => {
+    if (terms.length >= 0) { // Check for >= 0 to include empty arrays
       loadStats();
     }
-  }, [isOpen, terms]);
+  }, [terms]);
 
   const loadStats = async () => {
     try {
+      console.log('📊 Loading excluded terms statistics...');
       const statistics = await getStats();
+      console.log('📊 Statistics loaded:', statistics);
       setStats(statistics);
     } catch (err) {
-      console.error('Error loading stats:', err);
+      console.error('🚨 Error loading stats:', err);
+      // Stats are not critical, don't show error to user
     }
   };
 
@@ -75,28 +106,57 @@ const ExcludedTermsModal: React.FC<ExcludedTermsModalProps> = ({ isOpen, onClose
       return;
     }
 
-    const success = await addTerm(newTerm, newCategory, newReason || undefined);
-    if (success) {
-      setNewTerm('');
-      setNewReason('');
-      setNewCategory('custom');
-      await loadStats();
+    try {
+      console.log('➕ Adding new term:', { term: newTerm, category: newCategory });
+      const success = await addTerm(newTerm, newCategory, newReason || undefined);
+      if (success) {
+        setNewTerm('');
+        setNewReason('');
+        setNewCategory('custom');
+        console.log('✅ Term added, updating stats');
+        await loadStats();
+      }
+    } catch (err) {
+      console.error('🚨 Error in handleAddTerm:', err);
     }
   };
 
   const handleRemoveTerm = async (termId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este término?')) {
-      const success = await removeTerm(termId);
-      if (success) {
-        await loadStats();
+      try {
+        console.log('🗑️ Removing term:', termId);
+        const success = await removeTerm(termId);
+        if (success) {
+          console.log('✅ Term removed, updating stats');
+          await loadStats();
+        }
+      } catch (err) {
+        console.error('🚨 Error in handleRemoveTerm:', err);
       }
     }
   };
 
   const handleToggleTerm = async (termId: string) => {
-    const success = await toggleTerm(termId);
-    if (success) {
+    try {
+      console.log('🔄 Toggling term:', termId);
+      const success = await toggleTerm(termId);
+      if (success) {
+        console.log('✅ Term toggled, updating stats');
+        await loadStats();
+      }
+    } catch (err) {
+      console.error('🚨 Error in handleToggleTerm:', err);
+    }
+  };
+
+  const handleRefreshTerms = async () => {
+    try {
+      console.log('🔄 Refreshing terms from backend');
+      await refreshTerms();
+      console.log('✅ Terms refreshed, updating stats');
       await loadStats();
+    } catch (err) {
+      console.error('🚨 Error in handleRefreshTerms:', err);
     }
   };
 
@@ -171,6 +231,27 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Estado de carga */}
+            {isLoading && (
+              <div className="flex items-center gap-2 text-red-200">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm">Cargando...</span>
+              </div>
+            )}
+            
+            {/* Botón de refrescar */}
+            <div title="Actualizar términos desde servidor">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefreshTerms}
+                disabled={isLoading}
+                className="text-white hover:bg-red-600"
+              >
+                🔄
+              </Button>
+            </div>
+            
             <label className="flex items-center gap-2 text-white">
               <input
                 type="checkbox"

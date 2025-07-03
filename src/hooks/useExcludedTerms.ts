@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import excludedTermsService, { ExcludedTerm, ExcludedTermsConfig } from '../services/excludedTermsService';
+import excludedTermsService, { ExcludedTerm } from '../services/excludedTermsService';
 
 interface UseExcludedTermsReturn {
   // State
@@ -38,6 +38,11 @@ interface UseExcludedTermsReturn {
   refreshTerms: () => Promise<void>;
 }
 
+/**
+ * Backend-only Excluded Terms Hook
+ * Manages excluded terms state using only backend API calls
+ * No local storage or IndexedDB dependencies
+ */
 export const useExcludedTerms = (): UseExcludedTermsReturn => {
   const { user } = useAuth();
   const [terms, setTerms] = useState<ExcludedTerm[]>([]);
@@ -45,21 +50,36 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user's excluded terms configuration
-  const loadConfig = useCallback(async () => {
-    if (!user?.id) return;
+  // Load user's excluded terms from backend
+  const loadTerms = useCallback(async () => {
+    if (!user?.id) {
+      console.log('👤 No user authenticated, clearing terms');
+      setTerms([]);
+      setIsEnabled(true);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      await excludedTermsService.initDB();
-      const config = await excludedTermsService.getUserConfig(user.id);
-      setTerms(config.terms);
-      setIsEnabled(config.isEnabled);
+      console.log('📥 Loading excluded terms for user:', user.id);
+      
+      const userTerms = await excludedTermsService.getUserTerms(user.id);
+      
+      console.log('✅ Terms loaded successfully:', {
+        count: userTerms.length,
+        terms: userTerms.map(t => ({ id: t.id, term: t.term, category: t.category, isActive: t.isActive }))
+      });
+      
+      setTerms(userTerms);
+      // Feature is always enabled for now (could come from user preferences in the future)
+      setIsEnabled(true);
+      
     } catch (err) {
-      console.error('Error loading excluded terms:', err);
-      setError('Error al cargar los términos excluidos');
+      console.error('🚨 Error loading excluded terms:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar términos excluidos');
+      // On error, keep existing terms but show error
     } finally {
       setIsLoading(false);
     }
@@ -67,13 +87,14 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
 
   // Initialize on user change
   useEffect(() => {
-    loadConfig();
-  }, [loadConfig]);
+    loadTerms();
+  }, [loadTerms]);
 
-  // Refresh terms
+  // Refresh terms from backend
   const refreshTerms = useCallback(async () => {
-    await loadConfig();
-  }, [loadConfig]);
+    console.log('🔄 Refreshing terms from backend');
+    await loadTerms();
+  }, [loadTerms]);
 
   // Add a new excluded term
   const addTerm = useCallback(async (
@@ -89,19 +110,31 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
     // Validate term
     const validation = excludedTermsService.validateTerm(term);
     if (!validation.isValid) {
-      setError(validation.error || 'Término no válido');
+      setError(validation.error || 'Término inválido');
       return false;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setError(null);
-      const newTerm = await excludedTermsService.addExcludedTerm(user.id, term, category, reason);
-      setTerms(prev => [...prev, newTerm]);
+      console.log('➕ Adding term via backend:', { term, category });
+      
+      // Add term to backend
+      const newTerm = await excludedTermsService.addTerm(user.id, term, category);
+      
+      // Update local state immediately with the new term
+      setTerms(prevTerms => [...prevTerms, newTerm]);
+      
+      console.log('✅ Term added successfully:', newTerm);
       return true;
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al agregar término';
-      setError(errorMessage);
+      console.error('🚨 Error adding term:', err);
+      setError(err instanceof Error ? err.message : 'Error al agregar término');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [user?.id]);
 
@@ -112,16 +145,27 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
       return false;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setError(null);
-      const success = await excludedTermsService.removeExcludedTerm(user.id, termId);
-      if (success) {
-        setTerms(prev => prev.filter(term => term.id !== termId));
-      }
-      return success;
+      console.log('🗑️ Removing term via backend:', { termId });
+      
+      // Remove from backend
+      await excludedTermsService.removeTerm(user.id, termId);
+      
+      // Update local state immediately
+      setTerms(prevTerms => prevTerms.filter(term => term.id !== termId));
+      
+      console.log('✅ Term removed successfully');
+      return true;
+      
     } catch (err) {
-      setError('Error al eliminar término');
+      console.error('🚨 Error removing term:', err);
+      setError(err instanceof Error ? err.message : 'Error al eliminar término');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [user?.id]);
 
@@ -135,94 +179,85 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
       return false;
     }
 
-    // Validate term if being updated
-    if (updates.term) {
-      const validation = excludedTermsService.validateTerm(updates.term);
-      if (!validation.isValid) {
-        setError(validation.error || 'Término no válido');
-        return false;
-      }
-    }
+    setIsLoading(true);
+    setError(null);
 
     try {
-      setError(null);
-      const success = await excludedTermsService.updateExcludedTerm(user.id, termId, updates);
-      if (success) {
-        setTerms(prev => prev.map(term => 
-          term.id === termId 
-            ? { ...term, ...updates, updatedAt: Date.now() }
-            : term
-        ));
-      }
-      return success;
+      console.log('✏️ Updating term via backend:', { termId, updates });
+      
+      // Update in backend
+      const updatedTerm = await excludedTermsService.updateTerm(user.id, termId, updates);
+      
+      // Update local state immediately
+      setTerms(prevTerms => 
+        prevTerms.map(term => 
+          term.id === termId ? updatedTerm : term
+        )
+      );
+      
+      console.log('✅ Term updated successfully:', updatedTerm);
+      return true;
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al actualizar término';
-      setError(errorMessage);
+      console.error('🚨 Error updating term:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar término');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Toggle term active status
+  const toggleTerm = useCallback(async (termId: string): Promise<boolean> => {
+    console.log('🔄 Toggling term:', termId);
+    
+    const currentTerm = terms.find(t => t.id === termId);
+    if (!currentTerm) {
+      setError('Término no encontrado');
       return false;
     }
-  }, [user?.id]);
-
-  // Toggle term active state
-  const toggleTerm = useCallback(async (termId: string): Promise<boolean> => {
-    const term = terms.find(t => t.id === termId);
-    if (!term) return false;
-
-    return await updateTerm(termId, { isActive: !term.isActive });
+    
+    return updateTerm(termId, { isActive: !currentTerm.isActive });
   }, [terms, updateTerm]);
 
-  // Toggle the entire feature on/off
+  // Toggle the entire feature (for now just updates state, could call backend in future)
   const toggleFeature = useCallback(async (enabled: boolean): Promise<void> => {
-    if (!user?.id) {
-      setError('Usuario no autenticado');
-      return;
-    }
-
-    try {
-      setError(null);
-      await excludedTermsService.toggleExcludedTerms(user.id, enabled);
-      setIsEnabled(enabled);
-    } catch (err) {
-      setError('Error al cambiar el estado del filtro');
-    }
-  }, [user?.id]);
+    console.log('🔄 Toggling feature:', enabled);
+    setIsEnabled(enabled);
+    // In the future, this could save the preference to backend
+  }, []);
 
   // Filter text by removing excluded terms
-  const filterText = useCallback(async (text: string): Promise<{
-    filteredText: string;
-    removedTerms: string[];
-  }> => {
-    if (!user?.id || !isEnabled) {
+  const filterText = useCallback(async (text: string): Promise<{ filteredText: string; removedTerms: string[] }> => {
+    if (!user?.id) {
       return { filteredText: text, removedTerms: [] };
     }
 
     try {
       return await excludedTermsService.filterText(user.id, text);
     } catch (err) {
-      console.error('Error filtering text:', err);
+      console.error('🚨 Error filtering text:', err);
       return { filteredText: text, removedTerms: [] };
     }
-  }, [user?.id, isEnabled]);
+  }, [user?.id]);
 
   // Check if text contains excluded terms
-  const containsExcludedTerms = useCallback(async (text: string): Promise<{
-    hasExcludedTerms: boolean;
-    foundTerms: string[];
-  }> => {
-    if (!user?.id || !isEnabled) {
+  const containsExcludedTerms = useCallback(async (text: string): Promise<{ hasExcludedTerms: boolean; foundTerms: string[] }> => {
+    if (!user?.id) {
       return { hasExcludedTerms: false, foundTerms: [] };
     }
 
     try {
       return await excludedTermsService.containsExcludedTerms(user.id, text);
     } catch (err) {
-      console.error('Error checking excluded terms:', err);
+      console.error('🚨 Error checking excluded terms:', err);
       return { hasExcludedTerms: false, foundTerms: [] };
     }
-  }, [user?.id, isEnabled]);
+  }, [user?.id]);
 
-  // Import terms from a list
+  // Import multiple terms
   const importTerms = useCallback(async (
-    termList: string[], 
+    terms: string[], 
     category: ExcludedTerm['category'] = 'custom'
   ): Promise<number> => {
     if (!user?.id) {
@@ -230,18 +265,30 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
       return 0;
     }
 
-    try {
-      setError(null);
-      const importedCount = await excludedTermsService.importTerms(user.id, termList, category);
-      await refreshTerms(); // Reload to get updated list
-      return importedCount;
-    } catch (err) {
-      setError('Error al importar términos');
-      return 0;
-    }
-  }, [user?.id, refreshTerms]);
+    setIsLoading(true);
+    setError(null);
 
-  // Export terms to a list
+    try {
+      console.log('📥 Importing terms via backend:', { count: terms.length, category });
+      
+      const importedTerms = await excludedTermsService.importTerms(user.id, terms, category);
+      
+      // Update local state with new terms
+      setTerms(prevTerms => [...prevTerms, ...importedTerms]);
+      
+      console.log('✅ Terms imported successfully:', importedTerms.length);
+      return importedTerms.length;
+      
+    } catch (err) {
+      console.error('🚨 Error importing terms:', err);
+      setError(err instanceof Error ? err.message : 'Error al importar términos');
+      return 0;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Export terms
   const exportTerms = useCallback(async (): Promise<string[]> => {
     if (!user?.id) {
       return [];
@@ -250,7 +297,8 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
     try {
       return await excludedTermsService.exportTerms(user.id);
     } catch (err) {
-      setError('Error al exportar términos');
+      console.error('🚨 Error exporting terms:', err);
+      setError(err instanceof Error ? err.message : 'Error al exportar términos');
       return [];
     }
   }, [user?.id]);
@@ -262,19 +310,26 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setError(null);
+      console.log('🧹 Clearing all terms via backend');
+      
       await excludedTermsService.clearAllTerms(user.id);
+      
+      // Clear local state
       setTerms([]);
+      
+      console.log('✅ All terms cleared successfully');
+      
     } catch (err) {
-      setError('Error al eliminar todos los términos');
+      console.error('🚨 Error clearing terms:', err);
+      setError(err instanceof Error ? err.message : 'Error al limpiar términos');
+    } finally {
+      setIsLoading(false);
     }
   }, [user?.id]);
-
-  // Validate term
-  const validateTerm = useCallback((term: string) => {
-    return excludedTermsService.validateTerm(term);
-  }, []);
 
   // Get statistics
   const getStats = useCallback(async () => {
@@ -282,23 +337,44 @@ export const useExcludedTerms = (): UseExcludedTermsReturn => {
       return {
         totalTerms: 0,
         activeTerms: 0,
-        byCategory: {} as Record<ExcludedTerm['category'], number>,
-        isEnabled: false
+        byCategory: {
+          artist: 0,
+          genre: 0,
+          song: 0,
+          album: 0,
+          keyword: 0,
+          custom: 0,
+        },
+        isEnabled: true
       };
     }
 
     try {
       return await excludedTermsService.getStats(user.id);
     } catch (err) {
-      setError('Error al obtener estadísticas');
-      return {
-        totalTerms: 0,
-        activeTerms: 0,
-        byCategory: {} as Record<ExcludedTerm['category'], number>,
-        isEnabled: false
+      console.error('🚨 Error getting stats:', err);
+      // Fallback to local calculation
+      const stats = {
+        totalTerms: terms.length,
+        activeTerms: terms.filter(t => t.isActive).length,
+        byCategory: {
+          artist: terms.filter(t => t.category === 'artist').length,
+          genre: terms.filter(t => t.category === 'genre').length,
+          song: terms.filter(t => t.category === 'song').length,
+          album: terms.filter(t => t.category === 'album').length,
+          keyword: terms.filter(t => t.category === 'keyword').length,
+          custom: terms.filter(t => t.category === 'custom').length,
+        },
+        isEnabled
       };
+      return stats;
     }
-  }, [user?.id]);
+  }, [user?.id, terms, isEnabled]);
+
+  // Validate term
+  const validateTerm = useCallback((term: string) => {
+    return excludedTermsService.validateTerm(term);
+  }, []);
 
   return {
     // State
