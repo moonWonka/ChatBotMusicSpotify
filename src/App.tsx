@@ -31,7 +31,7 @@ const App: React.FC = () => {
     startNewChat,
     loadConversation,
     clearError,
-  } = useChatSession();
+  } = useChatSession(selectedModel);
 
   const isTyping = isLoading && messages.length > 0 && 
     messages[messages.length - 1].sender === 'ai' && 

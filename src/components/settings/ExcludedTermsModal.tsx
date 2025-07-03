@@ -158,12 +158,12 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg max-w-3xl w-full max-h-[85vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <div className="bg-gray-800 rounded-lg max-w-7xl w-full max-h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-red-700 p-4 flex items-center justify-between">
+        <div className="bg-red-700 p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               🚫 Términos Excluidos
             </h2>
             <p className="text-red-200 text-sm">
@@ -193,7 +193,7 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
 
         {/* Stats Bar - Simplified */}
         {stats && (
-          <div className="bg-gray-750 px-4 py-2 border-b border-gray-600">
+          <div className="bg-gray-750 px-6 py-3 border-b border-gray-600">
             <div className="flex items-center justify-between text-sm text-gray-300">
               <div className="flex gap-6">
                 <span>📊 Total: <strong>{stats.totalTerms}</strong></span>
@@ -209,20 +209,20 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
         )}
 
         {/* Add New Term - Simplified */}
-        <div className="p-4 border-b border-gray-600 bg-gray-750">
-          <div className="flex gap-3">
+        <div className="p-6 border-b border-gray-600 bg-gray-750">
+          <div className="flex gap-5">
             <input
               type="text"
               value={newTerm}
               onChange={(e) => setNewTerm(e.target.value)}
               placeholder="Nuevo término a excluir..."
-              className="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+              className="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-base"
               onKeyPress={(e) => e.key === 'Enter' && handleAddTerm()}
             />
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as ExcludedTerm['category'])}
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none min-w-[140px]"
+              className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none min-w-[160px] text-base"
             >
               {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -233,13 +233,13 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
               value={newReason}
               onChange={(e) => setNewReason(e.target.value)}
               placeholder="Razón (opcional)"
-              className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none min-w-[150px]"
+              className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none min-w-[180px] text-base"
             />
             <Button
               variant="primary"
               onClick={handleAddTerm}
               disabled={!newTerm.trim() || isLoading}
-              className="bg-red-600 hover:bg-red-500 px-4 py-2 whitespace-nowrap"
+              className="bg-red-600 hover:bg-red-500 px-6 py-3 whitespace-nowrap text-base font-medium"
             >
               ➕ Agregar
             </Button>
@@ -247,8 +247,8 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
         </div>
 
         {/* Action Buttons - Simplified */}
-        <div className="px-4 py-3 border-b border-gray-600 bg-gray-750">
-          <div className="flex gap-2">
+        <div className="px-6 py-5 border-b border-gray-600 bg-gray-750">
+          <div className="flex gap-4">
             <Button
               variant="ghost"
               size="sm"
@@ -286,18 +286,18 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
         </div>
 
         {/* Search - Simplified */}
-        <div className="p-4 border-b border-gray-600">
+        <div className="p-6 border-b border-gray-600">
           <input
             type="text"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder="Buscar términos..."
-            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-base"
           />
         </div>
 
         {/* Terms List */}
-        <div className="flex-grow overflow-y-auto" style={{ maxHeight: 'calc(85vh - 300px)' }}>
+        <div className="flex-grow overflow-y-auto" style={{ maxHeight: 'calc(95vh - 340px)' }}>
           {error && (
             <div className="p-4">
               <ErrorMessage message={error} variant="error" />
@@ -317,30 +317,30 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
               }
             </div>
           ) : (
-            <div className="p-4 space-y-2">
+            <div className="p-6 space-y-4">
               {filteredTerms.map((term) => (
                 <div
                   key={term.id}
-                  className={`bg-gray-700 rounded-lg p-3 border border-gray-600 hover:bg-gray-650 transition-colors ${!term.isActive ? 'opacity-50' : ''}`}
+                  className={`bg-gray-700 rounded-lg p-5 border border-gray-600 hover:bg-gray-650 transition-colors ${!term.isActive ? 'opacity-50' : ''}`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-grow">
+                    <div className="flex items-center gap-4 flex-grow">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium text-white ${CATEGORY_COLORS[term.category]}`}
+                        className={`px-3 py-1 rounded text-sm font-medium text-white ${CATEGORY_COLORS[term.category]}`}
                       >
                         {CATEGORY_LABELS[term.category]}
                       </span>
-                      <span className="text-white font-medium">{term.term}</span>
+                      <span className="text-white font-medium text-base">{term.term}</span>
                       {term.reason && (
-                        <span className="text-gray-400 text-sm">• {term.reason}</span>
+                        <span className="text-gray-400 text-base">• {term.reason}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleToggleTerm(term.id)}
-                        className={`p-1 ${term.isActive ? 'text-green-400 hover:text-green-300' : 'text-gray-500 hover:text-gray-400'}`}
+                        className={`p-2 text-lg ${term.isActive ? 'text-green-400 hover:text-green-300' : 'text-gray-500 hover:text-gray-400'}`}
                       >
                         {term.isActive ? '✅' : '⏸️'}
                       </Button>
@@ -348,7 +348,7 @@ Esta acción eliminará ${terms.length} términos y NO se puede deshacer.`;
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveTerm(term.id)}
-                        className="text-red-400 hover:text-red-300 p-1"
+                        className="text-red-400 hover:text-red-300 p-2 text-lg"
                       >
                         🗑️
                       </Button>

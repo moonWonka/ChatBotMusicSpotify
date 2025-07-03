@@ -4,7 +4,7 @@ import { bffChatService } from '../services/chatService';
 import { historyService } from '../services/historyService';
 import { useAuth } from './useAuth';
 
-export const useChatSession = () => {
+export const useChatSession = (selectedModel: string = 'gemini') => {
   const { user } = useAuth(); // Obtener el usuario autenticado
   const [messages, setMessages] = useState<ChatMessageContent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -100,8 +100,13 @@ export const useChatSession = () => {
   }, []);
 
   const handleSendMessage = async (inputText: string) => {
+    console.log('🚀 Iniciando envío de mensaje:', inputText);
+    console.log('👤 Usuario autenticado:', user?.id);
+    console.log('🆔 Session ID actual:', currentSessionId);
+    
     if (!inputText.trim() || isLoading || !user?.id) {
       if (!user?.id) {
+        console.error('❌ Usuario no autenticado');
         setError('Error: Usuario no autenticado');
       }
       return;
@@ -135,11 +140,15 @@ export const useChatSession = () => {
     
     const messagesWithPlaceholder = [...newMessages, aiPlaceholderMessage];
     setMessages(messagesWithPlaceholder);    try {
+      console.log('📞 Llamando al servicio sendMessageStream...');
+      console.log('🧠 Modelo de IA seleccionado:', selectedModel);
       await bffChatService.sendMessageStream(
         inputText,
         user.id, // Firebase UID
+        selectedModel, // Modelo de IA seleccionado
         currentSessionId || undefined,
         (chunkText: string) => {
+          console.log('📝 Chunk recibido:', chunkText.substring(0, 50) + '...');
           setMessages(prevMessages =>
             prevMessages.map(msg =>
               msg.id === aiPlaceholderMessageId ? { ...msg, text: chunkText } : msg
@@ -147,6 +156,8 @@ export const useChatSession = () => {
           );
         },
         (fullResponse: string, returnedSessionId: string) => {
+          console.log('✅ Respuesta completa recibida');
+          console.log('🆔 Nuevo Session ID:', returnedSessionId);
           setIsLoading(false);
           setCurrentSessionId(returnedSessionId);
           const finalMessages = messagesWithPlaceholder.map(msg =>
@@ -157,7 +168,7 @@ export const useChatSession = () => {
           saveCurrentSession(finalMessages);
         },
         (err: Error) => {
-          console.error("Error al enviar mensaje:", err);
+          console.error("❌ Error al enviar mensaje:", err);
           setError(err.message || "No se pudo obtener respuesta de la IA.");
           setMessages(prevMessages =>
             prevMessages.map(msg =>
@@ -168,7 +179,7 @@ export const useChatSession = () => {
         }
       );
     } catch (e) {
-      console.error("Error en el manejo de sendMessageStream:", e);
+      console.error("🚨 Error en el manejo de sendMessageStream:", e);
       setError(e instanceof Error ? e.message : "Ocurrió un error inesperado.");
       setMessages(prevMessages =>
         prevMessages.map(msg =>
